@@ -29,7 +29,26 @@ Participant data, restricted datasets, credentials and generated artifacts must 
 
 ## Local services
 
-Set the following environment variables before using Compose: `POSTGRES_PASSWORD`, `DATA_DB_PASSWORD`, `ML_DB_PASSWORD`, `RECOGNITION_DB_PASSWORD`, `RABBITMQ_USER`, `RABBITMQ_PASSWORD`, `REDIS_PASSWORD`, `GATEWAY_USERNAME` and `GATEWAY_PASSWORD`. They can be placed in a local `.env` file, which Git ignores. Use distinct strong passwords and keep them out of the repository. The database and RabbitMQ passwords initialize their respective volumes on first startup; changing the environment alone does not update an existing volume's credentials.
+Database materials are described in the [database overview](database/README.md) and the [data dictionary](database/DATA_DICTIONARY.md). The dictionary covers the original schema and the schemas currently used by the local services.
+
+Create a local `.env` file with the variables below before using Compose. Choose distinct passwords and do not commit this file. The database and RabbitMQ passwords initialize their respective volumes on first startup; changing the environment alone does not update an existing volume's credentials.
+
+```powershell
+@'
+POSTGRES_PASSWORD=replace-with-a-unique-long-password
+DATA_DB_PASSWORD=replace-with-another-unique-long-password
+ML_DB_PASSWORD=replace-with-another-unique-long-password
+RECOGNITION_DB_PASSWORD=replace-with-another-unique-long-password
+RABBITMQ_USER=myocontrol
+RABBITMQ_PASSWORD=replace-with-another-unique-long-password
+REDIS_PASSWORD=replace-with-another-unique-long-password
+GATEWAY_USERNAME=operator
+GATEWAY_PASSWORD=replace-with-another-unique-long-password
+GRAFANA_PASSWORD=replace-with-another-unique-long-password
+'@ | Set-Content -Encoding ascii .env
+```
+
+Edit the placeholder values before starting the services.
 
 ```powershell
 docker compose up -d --build

@@ -96,6 +96,7 @@ jobs:
           createdb thesis_recognition_service_test
           psql -X -v ON_ERROR_STOP=1 -d thesis_recognition_service_test -f services/recognition/migrations/0001_replay.sql
           psql -X -v ON_ERROR_STOP=1 -d thesis_recognition_service_test -f services/recognition/migrations/0002_model_events.sql
+          python -m pip install -r services/recognition/requirements.txt
           RECOGNITION_DATABASE_URL='postgresql+psycopg://thesis_test:test-only@localhost:5432/thesis_recognition_service_test' \
             PYTHONPATH=services/recognition python -m unittest discover -s services/recognition/tests -p 'test_*.py' -v
       - name: Check cross-service synthetic flow
@@ -177,6 +178,7 @@ jobs:
       REDIS_PASSWORD: ci-test-cache
       GATEWAY_USERNAME: ci-test-user
       GATEWAY_PASSWORD: ci-test-gateway
+      GATEWAY_REQUESTS_PER_MINUTE: '1000'
       POSTGRES_PORT: '55434'
       GATEWAY_PORT: '18000'
       TEST_GATEWAY_USERNAME: ci-test-user

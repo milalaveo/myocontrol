@@ -1,3 +1,17 @@
+name: myocontrol
+
+x-tracing: &tracing
+  OTEL_SDK_DISABLED: ${OTEL_SDK_DISABLED:-true}
+  OTEL_TRACES_EXPORTER: otlp
+  OTEL_METRICS_EXPORTER: none
+  OTEL_LOGS_EXPORTER: ${OTEL_LOGS_EXPORTER:-none}
+  OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED: "true"
+  OTEL_EXPORTER_OTLP_TRACES_PROTOCOL: grpc
+  OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: http://jaeger:4317
+  OTEL_EXPORTER_OTLP_LOGS_PROTOCOL: http/protobuf
+  OTEL_EXPORTER_OTLP_LOGS_ENDPOINT: http://loki:3100/otlp/v1/logs
+  OTEL_PYTHON_FASTAPI_EXCLUDED_URLS: health,metrics
+
 services:
   database:
     image: postgres:18
@@ -15,5 +29,239 @@ services:
       timeout: 5s
       retries: 5
 
+  rabbitmq:
+    image: rabbitmq:4
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:?Set RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?Set RABBITMQ_PASSWORD}
+    volumes:
+      - rabbit_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7.4
+    command: ["sh", "-c", "exec redis-server --requirepass \"$$REDIS_PASSWORD\" --save '' --appendonly no"]
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?Set REDIS_PASSWORD}
+    healthcheck:
+      test: ["CMD-SHELL", "REDISCLI_AUTH=\"$$REDIS_PASSWORD\" redis-cli ping | grep -q PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  migrate:
+    build:
+      context: .
+      dockerfile: services/migrator/Dockerfile
+    environment:
+      DB_HOST: database
+      DB_NAME: ${POSTGRES_DB:-thesis}
+      DB_ADMIN_USER: ${POSTGRES_USER:-thesis_admin}
+      DB_ADMIN_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+      DATA_DB_PASSWORD: ${DATA_DB_PASSWORD:?Set DATA_DB_PASSWORD}
+      ML_DB_PASSWORD: ${ML_DB_PASSWORD:?Set ML_DB_PASSWORD}
+      RECOGNITION_DB_PASSWORD: ${RECOGNITION_DB_PASSWORD:?Set RECOGNITION_DB_PASSWORD}
+    volumes:
+      - signal_data:/signal-data
+    depends_on:
+      database:
+        condition: service_healthy
+    restart: "no"
+
+  data-protocol:
+    build: ./services/data_protocol
+    environment:
+      <<: *tracing
+      OTEL_SERVICE_NAME: data-protocol
+      DB_HOST: database
+      DB_NAME: ${POSTGRES_DB:-thesis}
+      DATA_DB_PASSWORD: ${DATA_DB_PASSWORD:?Set DATA_DB_PASSWORD}
+      DATA_ARTIFACT_ROOT: /signal-data
+    volumes:
+      - signal_data:/signal-data
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8001/health/ready', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 8
+
+  ml-experiments:
+    build: ./services/ml_experiments
+    environment:
+      <<: *tracing
+      OTEL_SERVICE_NAME: ml-experiments
+      DB_HOST: database
+      DB_NAME: ${POSTGRES_DB:-thesis}
+      ML_DB_PASSWORD: ${ML_DB_PASSWORD:?Set ML_DB_PASSWORD}
+      DATA_SERVICE_URL: http://data-protocol:8001
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8002/health/ready', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 8
+
+  recognition:
+    build: ./services/recognition
+    environment:
+      <<: *tracing
+      OTEL_SERVICE_NAME: recognition
+      DB_HOST: database
+      DB_NAME: ${POSTGRES_DB:-thesis}
+      RECOGNITION_DB_PASSWORD: ${RECOGNITION_DB_PASSWORD:?Set RECOGNITION_DB_PASSWORD}
+      DATA_SERVICE_URL: http://data-protocol:8001
+      ML_SERVICE_URL: http://ml-experiments:8002
+      REDIS_HOST: redis
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?Set REDIS_PASSWORD}
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8003/health/ready', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 8
+
+  outbox-publisher:
+    build: ./services/ml_experiments
+    command: ["opentelemetry-instrument", "python", "-m", "ml_experiments.outbox_worker"]
+    environment:
+      <<: *tracing
+      OTEL_SERVICE_NAME: ml-outbox
+      DB_HOST: database
+      DB_NAME: ${POSTGRES_DB:-thesis}
+      ML_DB_PASSWORD: ${ML_DB_PASSWORD:?Set ML_DB_PASSWORD}
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_USER: ${RABBITMQ_USER:?Set RABBITMQ_USER}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:?Set RABBITMQ_PASSWORD}
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      rabbitmq:
+        condition: service_healthy
+    restart: unless-stopped
+
+  experiment-worker:
+    build: ./services/ml_experiments
+    command: ["opentelemetry-instrument", "python", "-m", "ml_experiments.experiment_worker"]
+    environment:
+      <<: *tracing
+      OTEL_SERVICE_NAME: ml-worker
+      DB_HOST: database
+      DB_NAME: ${POSTGRES_DB:-thesis}
+      ML_DB_PASSWORD: ${ML_DB_PASSWORD:?Set ML_DB_PASSWORD}
+      DATA_SERVICE_URL: http://data-protocol:8001
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      data-protocol:
+        condition: service_healthy
+    restart: unless-stopped
+
+  model-events:
+    build: ./services/recognition
+    command: ["opentelemetry-instrument", "python", "-m", "recognition.model_events"]
+    environment:
+      <<: *tracing
+      OTEL_SERVICE_NAME: recognition-events
+      DB_HOST: database
+      DB_NAME: ${POSTGRES_DB:-thesis}
+      RECOGNITION_DB_PASSWORD: ${RECOGNITION_DB_PASSWORD:?Set RECOGNITION_DB_PASSWORD}
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_USER: ${RABBITMQ_USER:?Set RABBITMQ_USER}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:?Set RABBITMQ_PASSWORD}
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      rabbitmq:
+        condition: service_healthy
+    restart: unless-stopped
+
+  gateway:
+    build: ./gateway
+    environment:
+      <<: *tracing
+      OTEL_SERVICE_NAME: gateway
+      GATEWAY_USERNAME: ${GATEWAY_USERNAME:?Set GATEWAY_USERNAME}
+      GATEWAY_PASSWORD: ${GATEWAY_PASSWORD:?Set GATEWAY_PASSWORD}
+      DATA_SERVICE_URL: http://data-protocol:8001
+      ML_SERVICE_URL: http://ml-experiments:8002
+      RECOGNITION_SERVICE_URL: http://recognition:8003
+    ports:
+      - "127.0.0.1:${GATEWAY_PORT:-8000}:8000"
+    depends_on:
+      data-protocol:
+        condition: service_healthy
+      ml-experiments:
+        condition: service_healthy
+      recognition:
+        condition: service_healthy
+
+  prometheus:
+    image: prom/prometheus:v3.5.0
+    profiles: ["observability"]
+    volumes:
+      - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./observability/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "127.0.0.1:${PROMETHEUS_PORT:-9090}:9090"
+    depends_on:
+      - alertmanager
+
+  alertmanager:
+    image: prom/alertmanager:v0.28.1
+    profiles: ["observability"]
+    command: ["--config.file=/etc/alertmanager/alertmanager.yml", "--storage.path=/alertmanager"]
+    volumes:
+      - ./observability/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - alertmanager_data:/alertmanager
+
+  grafana:
+    image: grafana/grafana:12.2.0
+    profiles: ["observability"]
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    entrypoint: ["/bin/sh", "-c", "test -n \"$$GF_SECURITY_ADMIN_PASSWORD\" || { echo 'GRAFANA_PASSWORD is required'; exit 1; }; exec /run.sh"]
+    volumes:
+      - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "127.0.0.1:${GRAFANA_PORT:-3001}:3000"
+    depends_on:
+      - prometheus
+
+  jaeger:
+    image: cr.jaegertracing.io/jaegertracing/jaeger:2.23.0
+    profiles: ["observability"]
+    ports:
+      - "127.0.0.1:${JAEGER_PORT:-16686}:16686"
+
+  loki:
+    image: grafana/loki:3.7.8
+    profiles: ["observability"]
+    command: ["-config.file=/etc/loki/loki.yml"]
+    volumes:
+      - ./observability/loki.yml:/etc/loki/loki.yml:ro
+      - loki_data:/loki
+
 volumes:
   postgres_data:
+  signal_data:
+  rabbit_data:
+  prometheus_data:
+  alertmanager_data:
+  grafana_data:
+  loki_data:

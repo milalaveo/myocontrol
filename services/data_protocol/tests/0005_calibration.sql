@@ -1,0 +1,90 @@
+BEGIN;
+INSERT INTO data_protocol.participants(id, pseudonym) VALUES
+    ('00000000-0000-0000-0000-000000000001', 'research-source'),
+    ('00000000-0000-0000-0000-000000000002', 'research-target');
+INSERT INTO data_protocol.recordings(id, participant_id, sample_rate_hz, sample_count, artifact_sha256) VALUES
+    ('10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000001', 1000, 100, repeat('a', 64)),
+    ('10000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000002', 1000, 100, repeat('b', 64)),
+    ('10000000-0000-0000-0000-000000000003', '00000000-0000-0000-0000-000000000002', 1000, 100, repeat('b', 64));
+INSERT INTO data_protocol.labelled_segments(id, recording_id, gesture_code, repetition_key, start_sample, end_sample) VALUES
+    ('20000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000001', 'rest', 'one', 0, 100),
+    ('20000000-0000-0000-0000-000000000002', '10000000-0000-0000-0000-000000000002', 'rest', 'one', 0, 60),
+    ('20000000-0000-0000-0000-000000000003', '10000000-0000-0000-0000-000000000003', 'rest', 'two', 50, 100);
+INSERT INTO data_protocol.protocol_versions(id, name, version, gesture_codes) VALUES
+    ('30000000-0000-0000-0000-000000000001', 'synthetic', 1, ARRAY['rest']);
+INSERT INTO data_protocol.research_manifests(id, protocol_id, name, version) VALUES
+    ('40000000-0000-0000-0000-000000000001', '30000000-0000-0000-0000-000000000001', 'overlap', 1),
+    ('40000000-0000-0000-0000-000000000002', '30000000-0000-0000-0000-000000000001', 'valid', 1);
+INSERT INTO data_protocol.manifest_participants VALUES
+    ('40000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000001', 'source'),
+    ('40000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000002', 'target'),
+    ('40000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000001', 'source'),
+    ('40000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000002', 'target');
+INSERT INTO data_protocol.manifest_units VALUES
+    ('50000000-0000-0000-0000-000000000001', '40000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000001', 'source', '20000000-0000-0000-0000-000000000001', 'source_train'),
+    ('50000000-0000-0000-0000-000000000002', '40000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000002', 'target', '20000000-0000-0000-0000-000000000002', 'target_calibration'),
+    ('50000000-0000-0000-0000-000000000003', '40000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000002', 'target', '20000000-0000-0000-0000-000000000003', 'target_test'),
+    ('50000000-0000-0000-0000-000000000004', '40000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000001', 'source', '20000000-0000-0000-0000-000000000001', 'source_train'),
+    ('50000000-0000-0000-0000-000000000005', '40000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000002', 'target', '20000000-0000-0000-0000-000000000003', 'target_test');
+INSERT INTO data_protocol.labelled_segments(id, recording_id, gesture_code, repetition_key, start_sample, end_sample) VALUES
+    ('20000000-0000-0000-0000-000000000004', '10000000-0000-0000-0000-000000000002', 'rest', 'three', 0, 50),
+    ('20000000-0000-0000-0000-000000000005', '10000000-0000-0000-0000-000000000002', 'rest', 'four', 10, 30),
+    ('20000000-0000-0000-0000-000000000006', '10000000-0000-0000-0000-000000000002', 'rest', 'five', 20, 40);
+INSERT INTO data_protocol.manifest_units VALUES
+    ('50000000-0000-0000-0000-000000000006', '40000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000002', 'target', '20000000-0000-0000-0000-000000000004', 'target_calibration'),
+    ('50000000-0000-0000-0000-000000000007', '40000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000002', 'target', '20000000-0000-0000-0000-000000000005', 'target_calibration'),
+    ('50000000-0000-0000-0000-000000000008', '40000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000002', 'target', '20000000-0000-0000-0000-000000000006', 'target_calibration');
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM data_protocol.research_split_conflicts('40000000-0000-0000-0000-000000000001')) THEN
+        RAISE EXCEPTION 'Duplicate recording overlap was not detected';
+    END IF;
+    BEGIN
+        UPDATE data_protocol.research_manifests SET state = 'frozen' WHERE id = '40000000-0000-0000-0000-000000000001';
+        RAISE EXCEPTION 'Overlapping split was frozen';
+    EXCEPTION WHEN raise_exception THEN
+        IF SQLERRM = 'Overlapping split was frozen' THEN RAISE; END IF;
+    END;
+    UPDATE data_protocol.research_manifests SET state = 'frozen' WHERE id = '40000000-0000-0000-0000-000000000002';
+    IF NOT EXISTS (SELECT 1 FROM data_protocol.research_manifests WHERE id = '40000000-0000-0000-0000-000000000002' AND length(checksum) = 64 AND frozen_at IS NOT NULL) THEN
+        RAISE EXCEPTION 'Valid manifest was not frozen';
+    END IF;
+    BEGIN
+        DELETE FROM data_protocol.manifest_units WHERE id = '50000000-0000-0000-0000-000000000005';
+        RAISE EXCEPTION 'Frozen membership was deleted';
+    EXCEPTION WHEN raise_exception THEN
+        IF SQLERRM = 'Frozen membership was deleted' THEN RAISE; END IF;
+    END;
+    INSERT INTO data_protocol.calibration_subsets(id, manifest_id, participant_id, selection_version, budget_per_gesture) VALUES
+        ('60000000-0000-0000-0000-000000000001', '40000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000002', 'v1', 1),
+        ('60000000-0000-0000-0000-000000000002', '40000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000002', 'v1', 2);
+    INSERT INTO data_protocol.calibration_items VALUES
+        ('60000000-0000-0000-0000-000000000001', '50000000-0000-0000-0000-000000000006'),
+        ('60000000-0000-0000-0000-000000000002', '50000000-0000-0000-0000-000000000007'),
+        ('60000000-0000-0000-0000-000000000002', '50000000-0000-0000-0000-000000000008');
+    BEGIN
+        INSERT INTO data_protocol.calibration_items VALUES ('60000000-0000-0000-0000-000000000002', '50000000-0000-0000-0000-000000000005');
+        RAISE EXCEPTION 'Test data was accepted for calibration';
+    EXCEPTION WHEN check_violation THEN NULL;
+    END;
+    UPDATE data_protocol.calibration_subsets SET state = 'frozen' WHERE id = '60000000-0000-0000-0000-000000000001';
+    BEGIN
+        UPDATE data_protocol.calibration_subsets SET state = 'frozen' WHERE id = '60000000-0000-0000-0000-000000000002';
+        RAISE EXCEPTION 'Non-nested budgets were accepted';
+    EXCEPTION WHEN raise_exception THEN
+        IF SQLERRM = 'Non-nested budgets were accepted' THEN RAISE; END IF;
+    END;
+    DELETE FROM data_protocol.calibration_items WHERE subset_id = '60000000-0000-0000-0000-000000000002' AND unit_id = '50000000-0000-0000-0000-000000000008';
+    INSERT INTO data_protocol.calibration_items VALUES ('60000000-0000-0000-0000-000000000002', '50000000-0000-0000-0000-000000000006');
+    UPDATE data_protocol.calibration_subsets SET state = 'frozen' WHERE id = '60000000-0000-0000-0000-000000000002';
+    IF (SELECT unique_seconds FROM data_protocol.calibration_durations WHERE subset_id = '60000000-0000-0000-0000-000000000002' AND gesture_code = 'rest') <> 0.05 THEN
+        RAISE EXCEPTION 'Overlapping calibration duration was counted twice';
+    END IF;
+    BEGIN
+        INSERT INTO data_protocol.calibration_items VALUES ('60000000-0000-0000-0000-000000000001', '50000000-0000-0000-0000-000000000005');
+        RAISE EXCEPTION 'Frozen calibration subset changed';
+    EXCEPTION WHEN raise_exception THEN
+        IF SQLERRM = 'Frozen calibration subset changed' THEN RAISE; END IF;
+    END;
+END $$;
+ROLLBACK;

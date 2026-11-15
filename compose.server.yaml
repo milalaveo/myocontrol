@@ -1,0 +1,36 @@
+# Optional public TLS entry point. Requires a real domain and reachable ports 80/443.
+services:
+  gateway:
+    environment:
+      GATEWAY_TRUSTED_PROXY_IP: 172.30.246.2
+    networks:
+      - default
+      - edge
+
+  caddy:
+    image: caddy:2.10.2
+    environment:
+      PUBLIC_HOST: ${PUBLIC_HOST:?Set PUBLIC_HOST to the server domain}
+      ACME_EMAIL: ${ACME_EMAIL:?Set ACME_EMAIL for certificate notices}
+    ports:
+      - "${PUBLIC_HTTP_PORT:-80}:80"
+      - "${PUBLIC_HTTPS_PORT:-443}:443"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      edge:
+        ipv4_address: 172.30.246.2
+    depends_on:
+      - gateway
+
+networks:
+  edge:
+    ipam:
+      config:
+        - subnet: 172.30.246.0/24
+
+volumes:
+  caddy_data:
+  caddy_config:

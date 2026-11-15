@@ -1,0 +1,5 @@
+# API Gateway
+
+The gateway routes `/data/v1/...`, `/experiments/v1/...` and `/recognition/v1/...` to the corresponding services. Interactive API documentation is available at `/data/docs`, `/experiments/docs` and `/recognition/docs`. The gateway requires HTTP Basic credentials from `GATEWAY_USERNAME` and `GATEWAY_PASSWORD`; service URLs come from `DATA_SERVICE_URL`, `ML_SERVICE_URL` and `RECOGNITION_SERVICE_URL`. The fixed-window rate limit defaults to 60 requests per minute per client IP, including unsuccessful authentication attempts, and can be set with `GATEWAY_REQUESTS_PER_MINUTE`. Health and metrics endpoints are exempt.
+
+This first implementation is for local development only. HTTP Basic requires TLS for any remote deployment. Rate limits are process-local, are reset on restart and are not shared across gateway replicas. Upstream services must not be directly exposed to untrusted networks. Per-user authorization, managed identities, shared/distributed limits and centralized gateway logging are TBD.

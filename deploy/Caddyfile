@@ -1,0 +1,15 @@
+{$PUBLIC_HOST} {
+    tls {$ACME_EMAIL}
+
+    @internal path /metrics* /openapi.json /docs
+    respond @internal 404
+
+    header {
+        Strict-Transport-Security "max-age=31536000"
+        X-Content-Type-Options "nosniff"
+    }
+
+    reverse_proxy gateway:8000 {
+        header_up X-Real-IP {remote_host}
+    }
+}

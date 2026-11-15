@@ -1,0 +1,17 @@
+groups:
+  - name: myocontrol
+    rules:
+      - alert: MyocontrolServiceUnavailable
+        expr: up{job="myocontrol-services"} == 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "A Myocontrol service cannot be scraped"
+      - alert: RecognitionReplayFailures
+        expr: increase(recognition_replays_total{status="failed"}[5m]) > 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "A recognition replay failed"

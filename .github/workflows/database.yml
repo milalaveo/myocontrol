@@ -68,6 +68,94 @@ jobs:
           psql -X -v ON_ERROR_STOP=1 -f database/seeds/001_reference_gestures.sql
           psql -X -v ON_ERROR_STOP=1 -f database/seeds/001_reference_gestures.sql
           python -m unittest discover -s backend/tests -p 'test_*.py' -v
+      - name: Check the data service API
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install -r services/data_protocol/requirements.txt
+          createdb thesis_data_service_test
+          psql -X -v ON_ERROR_STOP=1 -d thesis_data_service_test -f services/data_protocol/migrations/0001_participants.sql
+          psql -X -v ON_ERROR_STOP=1 -d thesis_data_service_test -f services/data_protocol/migrations/0002_recordings.sql
+          psql -X -v ON_ERROR_STOP=1 -d thesis_data_service_test -f services/data_protocol/migrations/0003_synthetic_splits.sql
+          psql -X -v ON_ERROR_STOP=1 -d thesis_data_service_test -f services/data_protocol/migrations/0004_research_splits.sql
+          psql -X -v ON_ERROR_STOP=1 -d thesis_data_service_test -f services/data_protocol/tests/0004_research_splits.sql
+          psql -X -v ON_ERROR_STOP=1 -d thesis_data_service_test -f services/data_protocol/migrations/0005_calibration.sql
+          psql -X -v ON_ERROR_STOP=1 -d thesis_data_service_test -f services/data_protocol/tests/0005_calibration.sql
+          DATA_DATABASE_URL='postgresql+psycopg://thesis_test:test-only@localhost:5432/thesis_data_service_test' \
+            PYTHONPATH=services/data_protocol python -m unittest discover -s services/data_protocol/tests -p 'test_*.py' -v
+          python -m pip install -r services/ml_experiments/requirements.txt
+          createdb thesis_ml_service_test
+          psql -X -v ON_ERROR_STOP=1 -d thesis_ml_service_test -f services/ml_experiments/migrations/0001_summary_jobs.sql
+          psql -X -v ON_ERROR_STOP=1 -d thesis_ml_service_test -f services/ml_experiments/migrations/0002_source_lda.sql
+          psql -X -v ON_ERROR_STOP=1 -d thesis_ml_service_test -f services/ml_experiments/migrations/0003_model_checksum.sql
+          psql -X -v ON_ERROR_STOP=1 -d thesis_ml_service_test -f services/ml_experiments/migrations/0004_model_outbox.sql
+          psql -X -v ON_ERROR_STOP=1 -d thesis_ml_service_test -f services/ml_experiments/migrations/0005_experiment_jobs.sql
+          psql -X -v ON_ERROR_STOP=1 -d thesis_ml_service_test -f services/ml_experiments/migrations/0006_trace_context.sql
+          ML_DATABASE_URL='postgresql+psycopg://thesis_test:test-only@localhost:5432/thesis_ml_service_test' \
+            PYTHONPATH=services/ml_experiments python -m unittest discover -s services/ml_experiments/tests -p 'test_*.py' -v
+          createdb thesis_recognition_service_test
+          psql -X -v ON_ERROR_STOP=1 -d thesis_recognition_service_test -f services/recognition/migrations/0001_replay.sql
+          psql -X -v ON_ERROR_STOP=1 -d thesis_recognition_service_test -f services/recognition/migrations/0002_model_events.sql
+          RECOGNITION_DATABASE_URL='postgresql+psycopg://thesis_test:test-only@localhost:5432/thesis_recognition_service_test' \
+            PYTHONPATH=services/recognition python -m unittest discover -s services/recognition/tests -p 'test_*.py' -v
+      - name: Check cross-service synthetic flow
+        shell: bash
+        run: |
+          set -euo pipefail
+          DATA_DATABASE_URL='postgresql+psycopg://thesis_test:test-only@localhost:5432/thesis_data_service_test' \
+            DATA_ARTIFACT_ROOT="$RUNNER_TEMP/signals" PYTHONPATH=services/data_protocol \
+            python -m uvicorn data_protocol.main:app --host 127.0.0.1 --port 8001 >"$RUNNER_TEMP/data.log" 2>&1 &
+          ML_DATABASE_URL='postgresql+psycopg://thesis_test:test-only@localhost:5432/thesis_ml_service_test' \
+            DATA_SERVICE_URL=http://127.0.0.1:8001 PYTHONPATH=services/ml_experiments \
+            python -m uvicorn ml_experiments.main:app --host 127.0.0.1 --port 8002 >"$RUNNER_TEMP/ml.log" 2>&1 &
+          ML_DATABASE_URL='postgresql+psycopg://thesis_test:test-only@localhost:5432/thesis_ml_service_test' \
+            DATA_SERVICE_URL=http://127.0.0.1:8001 PYTHONPATH=services/ml_experiments \
+            python -m ml_experiments.experiment_worker >"$RUNNER_TEMP/worker.log" 2>&1 &
+          RECOGNITION_DATABASE_URL='postgresql+psycopg://thesis_test:test-only@localhost:5432/thesis_recognition_service_test' \
+            DATA_SERVICE_URL=http://127.0.0.1:8001 ML_SERVICE_URL=http://127.0.0.1:8002 PYTHONPATH=services/recognition \
+            python -m uvicorn recognition.main:app --host 127.0.0.1 --port 8003 >"$RUNNER_TEMP/recognition.log" 2>&1 &
+          curl --fail --retry 10 --retry-connrefused --retry-delay 1 http://127.0.0.1:8001/health/ready
+          curl --fail --retry 10 --retry-connrefused --retry-delay 1 http://127.0.0.1:8002/health/ready
+          curl --fail --retry 10 --retry-connrefused --retry-delay 1 http://127.0.0.1:8003/health/ready
+          DATA_SERVICE_URL=http://127.0.0.1:8001 ML_SERVICE_URL=http://127.0.0.1:8002 RECOGNITION_SERVICE_URL=http://127.0.0.1:8003 \
+            PYTHONPATH=services/ml_experiments:services/recognition \
+            python -m unittest discover -s services/tests -p 'test_*.py' -v
+      - name: Check service schema isolation
+        shell: bash
+        run: |
+          set -euo pipefail
+          createdb thesis_service_roles_test
+          for file in services/data_protocol/migrations/*.sql services/ml_experiments/migrations/*.sql services/recognition/migrations/*.sql; do
+            psql -X -v ON_ERROR_STOP=1 -d thesis_service_roles_test -f "$file"
+          done
+          psql -X -v ON_ERROR_STOP=1 -d thesis_service_roles_test -f database/service_roles.sql
+          psql -X -v ON_ERROR_STOP=1 -d thesis_service_roles_test -f database/tests/service_roles.sql
+      - name: Enforce backend coverage
+        shell: bash
+        env:
+          DATA_DATABASE_URL: postgresql+psycopg://thesis_test:test-only@localhost:5432/thesis_data_service_test
+          ML_DATABASE_URL: postgresql+psycopg://thesis_test:test-only@localhost:5432/thesis_ml_service_test
+          RECOGNITION_DATABASE_URL: postgresql+psycopg://thesis_test:test-only@localhost:5432/thesis_recognition_service_test
+          PYTHONPATH: backend/src:services/data_protocol:services/ml_experiments:services/recognition:gateway
+        run: |
+          set -euo pipefail
+          python -m pip install -r requirements-dev.txt
+          source_paths='backend/src/myoprosthesis,services/data_protocol/data_protocol,services/ml_experiments/ml_experiments,services/recognition/recognition,gateway/gateway'
+          python -m coverage run --source="$source_paths" -m unittest discover -s backend/tests -p 'test_*.py'
+          for test_dir in services/data_protocol/tests services/ml_experiments/tests services/recognition/tests gateway/tests; do
+            python -m coverage run -a --source="$source_paths" -m unittest discover -s "$test_dir" -p 'test_*.py'
+          done
+          python -m coverage report --fail-under=80
+          for include in 'backend/src/myoprosthesis/*' 'services/data_protocol/data_protocol/*' 'services/ml_experiments/ml_experiments/*' 'services/recognition/recognition/*' 'gateway/gateway/*'; do
+            python -m coverage report --include="$include" --fail-under=80
+          done
+      - name: Audit Python dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          for requirements in database/requirements.txt services/data_protocol/requirements.txt services/ml_experiments/requirements.txt services/recognition/requirements.txt services/migrator/requirements.txt gateway/requirements.txt; do
+            python -m pip_audit -r "$requirements"
+          done
       - name: Check generated SQL on a clean database
         shell: bash
         run: |
@@ -75,3 +163,45 @@ jobs:
           createdb thesis_ddl_test
           python -m alembic -c database/alembic.ini upgrade head --sql | psql -X -v ON_ERROR_STOP=1 -d thesis_ddl_test
           psql -X -v ON_ERROR_STOP=1 -d thesis_ddl_test -f database/tests/0014_recovery.sql
+
+  compose-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      POSTGRES_PASSWORD: ci-test-admin
+      DATA_DB_PASSWORD: ci-test-data
+      ML_DB_PASSWORD: ci-test-ml
+      RECOGNITION_DB_PASSWORD: ci-test-recognition
+      RABBITMQ_USER: ci-test-broker
+      RABBITMQ_PASSWORD: ci-test-broker-password
+      REDIS_PASSWORD: ci-test-cache
+      GATEWAY_USERNAME: ci-test-user
+      GATEWAY_PASSWORD: ci-test-gateway
+      POSTGRES_PORT: '55434'
+      GATEWAY_PORT: '18000'
+      TEST_GATEWAY_USERNAME: ci-test-user
+      TEST_GATEWAY_PASSWORD: ci-test-gateway
+      DATA_SERVICE_URL: http://127.0.0.1:18000/data
+      ML_SERVICE_URL: http://127.0.0.1:18000/experiments
+      RECOGNITION_SERVICE_URL: http://127.0.0.1:18000/recognition
+      EXPECT_MODEL_EVENT: '1'
+      COMPOSE_PROJECT_NAME: myocontrolci
+      TEST_ML_CONTAINER: myocontrolci-ml-experiments-1
+      GRAFANA_PASSWORD: ci-test-grafana
+      OTEL_SDK_DISABLED: 'false'
+      OTEL_LOGS_EXPORTER: otlp
+      PYTHONPATH: services/ml_experiments:services/recognition
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install -r services/ml_experiments/requirements.txt
+      - run: docker compose --profile observability up -d --build
+      - run: python -m unittest discover -s services/tests -p 'test_*.py' -v
+      - run: docker compose exec -T model-events python - < services/tests/broker_smoke.py
+      - run: docker compose exec -T gateway python - < observability/check_telemetry.py
+      - if: always()
+        run: docker compose logs --no-color
+      - if: always()
+        run: docker compose down

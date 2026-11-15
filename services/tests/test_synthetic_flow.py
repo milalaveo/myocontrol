@@ -15,7 +15,8 @@ class SyntheticFlowTests(unittest.TestCase):
     def client():
         username, password = os.getenv("TEST_GATEWAY_USERNAME"), os.getenv("TEST_GATEWAY_PASSWORD")
         auth = (username, password) if username and password else None
-        return httpx.Client(timeout=45, auth=auth)
+        # CI runners may define HTTP(S)_PROXY; local Compose traffic must bypass it.
+        return httpx.Client(timeout=45, auth=auth, trust_env=False)
 
     def test_recordings_split_and_computed_job(self):
         data_url = os.environ["DATA_SERVICE_URL"]

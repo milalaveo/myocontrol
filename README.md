@@ -22,7 +22,7 @@ The following work remains **TBD**:
 
 - Import and validation of real recordings, including Ninapro DB2.
 - Validation of signal processing, model training and evaluation on measured data, plus personalised and target-only models.
-- Production-ready APIs, operator interface, simulated hand and BITalino integration.
+- Production deployment, calibration UI, live BITalino integration and research validation of the hand-control flow.
 - Final experimental protocol, deployment configuration and data retention policy.
 
 Participant data, restricted datasets, credentials and generated artifacts must remain outside version control.
@@ -57,3 +57,7 @@ docker compose up -d --build
 The gateway is available on `http://127.0.0.1:8000`; service documentation is available at `/data/docs`, `/experiments/docs` and `/recognition/docs` after signing in with the gateway credentials. The development gateway uses HTTP Basic on loopback; a remote deployment requires TLS and a production access design. Use only synthetic data. The optional [observability profile](observability/README.md) starts monitoring and tracing locally.
 
 Run `docker compose --profile observability stop` to stop the local services without deleting their volumes. Rebuild after changes using `docker compose --profile observability up -d --build`.
+
+## Operator interface
+
+Start the React interface with `docker compose --profile ui up -d --build` and open **http://127.0.0.1:3000**. It provides an explicitly labelled interactive demo, EMG charts, five procedural hand poses, recording browsing, experiment submission and recorded prediction replay. Choose **Connect API** with the gateway credentials to load real data. See the [frontend guide](frontend/README.md) for development commands, libraries and current limitations.

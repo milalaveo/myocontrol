@@ -39,6 +39,12 @@ class RecordingRepository:
     def get(self, recording_id):
         return self.session.get(Recording, recording_id)
 
+    def list(self, participant_id, limit, offset):
+        query = select(Recording)
+        if participant_id is not None:
+            query = query.where(Recording.participant_id == participant_id)
+        return self.session.scalars(query.order_by(Recording.id).limit(limit).offset(offset)).all()
+
 
 class ResearchRepository:
     """Parameterized SQL for transactional, database-enforced split rules."""

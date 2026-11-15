@@ -38,6 +38,11 @@ class ParticipantApiTests(unittest.TestCase):
                     self.assertEqual(201, recording.status_code, recording.text)
                     self.assertEqual(2, recording.json()["sample_count"])
                     self.assertEqual(recording.json(), client.get("/v1/recordings/" + recording.json()["id"]).json())
+                    listed = client.get("/v1/recordings", params={"participant_id": participant["id"]})
+                    self.assertEqual(200, listed.status_code)
+                    self.assertEqual([recording.json()], listed.json())
+                    self.assertEqual([], client.get("/v1/recordings", params={"participant_id": str(uuid.uuid4())}).json())
+                    self.assertEqual(422, client.get("/v1/recordings?limit=101").status_code)
                     payload["samples"] = [[1, 2, 3]]
                     self.assertEqual(422, client.post("/v1/recordings", json=payload).status_code)
                     other = client.post("/v1/participants", json={"pseudonym": "target-" + uuid.uuid4().hex}).json()

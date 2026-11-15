@@ -217,6 +217,16 @@ def create_recording(body: RecordingCreate, session: Session = Depends(get_sessi
     return recording
 
 
+@app.get("/v1/recordings", response_model=list[RecordingResponse], tags=["recordings"])
+def list_recordings(
+    participant_id: uuid.UUID | None = None,
+    limit: Annotated[int, Query(ge=1, le=100)] = 50,
+    offset: Annotated[int, Query(ge=0)] = 0,
+    session: Session = Depends(get_session),
+):
+    return RecordingRepository(session).list(participant_id, limit, offset)
+
+
 @app.get("/v1/recordings/{recording_id}", response_model=RecordingResponse, tags=["recordings"])
 def get_recording(recording_id: uuid.UUID, session: Session = Depends(get_session)):
     recording = RecordingRepository(session).get(recording_id)

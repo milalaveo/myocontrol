@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.deps/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+build/
+dist/
+
+# Local configuration and tools
+.env
+.env.*
+!.env.example
+.vscode/
+.idea/
+
+# Local project notes and requirements
+/docs/
+
+# Local research data and outputs
+data/raw/
+data/interim/
+data/processed/
+data/artifacts/
+data/exports/
+*.log

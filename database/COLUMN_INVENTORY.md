@@ -1,0 +1,157 @@
+﻿# Physical column inventory
+
+Generated from PostgreSQL information_schema at migration 0016. Types use PostgreSQL internal names. Keys, checks, units, sources and semantic definitions remain documented in the migration SQL and logical dictionary; this inventory is not yet the complete data dictionary required by the project.
+
+| Table | Column | Type | Nullable | Default |
+| --- | --- | --- | --- | --- |
+| artifact_verifications | artifact_id | int8 | NO |  |
+| artifact_verifications | verified_sha256 | bpchar | NO |  |
+| artifact_verifications | verified_at | timestamptz | NO | CURRENT_TIMESTAMP |
+| artifacts | id | int8 | NO |  |
+| artifacts | storage_namespace | text | NO |  |
+| artifacts | storage_key | text | NO |  |
+| artifacts | media_type | text | NO |  |
+| artifacts | size_bytes | int8 | NO |  |
+| artifacts | sha256 | bpchar | NO |  |
+| artifacts | created_at | timestamptz | NO | CURRENT_TIMESTAMP |
+| calibration_items | subset_id | int8 | NO |  |
+| calibration_items | segment_id | int8 | NO |  |
+| calibration_subsets | id | int8 | NO |  |
+| calibration_subsets | manifest_id | int8 | NO |  |
+| calibration_subsets | participant_id | int8 | NO |  |
+| calibration_subsets | category | text | NO | 'target'::text |
+| calibration_subsets | budget_per_gesture | int4 | NO |  |
+| calibration_subsets | selection_version | text | NO |  |
+| calibration_subsets | parent_id | int8 | YES |  |
+| calibration_subsets | state | text | NO | 'draft'::text |
+| calibration_subsets | gesture_set_id | int8 | YES |  |
+| canonical_signals | id | int8 | NO |  |
+| canonical_signals | identity_scheme | text | NO |  |
+| canonical_signals | identity_value | text | NO |  |
+| canonical_signals | participant_id | int8 | NO |  |
+| canonical_signals | sample_count | int8 | NO |  |
+| confusion_counts | evaluation_id | int8 | NO |  |
+| confusion_counts | actual_gesture_id | int8 | NO |  |
+| confusion_counts | predicted_gesture_id | int8 | NO |  |
+| confusion_counts | count | int8 | NO |  |
+| dataset_versions | id | int8 | NO |  |
+| dataset_versions | dataset_id | int8 | NO |  |
+| dataset_versions | version | text | NO |  |
+| dataset_versions | usage_notes | text | YES |  |
+| datasets | id | int8 | NO |  |
+| datasets | name | text | NO |  |
+| evaluation_metrics | evaluation_id | int8 | NO |  |
+| evaluation_metrics | metric | text | NO |  |
+| evaluation_metrics | value | numeric | YES |  |
+| evaluation_metrics | missing_reason | text | YES |  |
+| evaluation_metrics | numerator | int8 | YES |  |
+| evaluation_metrics | denominator | int8 | YES |  |
+| evaluations | id | int8 | NO |  |
+| evaluations | run_id | int8 | NO |  |
+| evaluations | model_id | int8 | NO |  |
+| evaluations | participant_id | int8 | NO |  |
+| feature_configs | id | int8 | NO |  |
+| feature_configs | name | text | NO |  |
+| feature_configs | version | int4 | NO |  |
+| feature_configs | schema_version | text | NO |  |
+| feature_configs | parameters | jsonb | NO |  |
+| gesture_set_members | gesture_set_id | int8 | NO |  |
+| gesture_set_members | gesture_id | int8 | NO |  |
+| gesture_set_members | is_rest | bool | NO | false |
+| gesture_sets | id | int8 | NO |  |
+| gesture_sets | name | text | NO |  |
+| gesture_sets | version | int4 | NO |  |
+| gestures | id | int8 | NO |  |
+| gestures | code | text | NO |  |
+| gestures | description | text | NO |  |
+| labelled_segments | id | int8 | NO |  |
+| labelled_segments | signal_id | int8 | NO |  |
+| labelled_segments | gesture_id | int8 | NO |  |
+| labelled_segments | repetition_key | text | NO |  |
+| labelled_segments | start_sample | int8 | NO |  |
+| labelled_segments | end_sample | int8 | NO |  |
+| model_versions | id | int8 | NO |  |
+| model_versions | run_id | int8 | NO |  |
+| model_versions | family | text | NO |  |
+| model_versions | condition | text | NO |  |
+| model_versions | artifact_id | int8 | NO |  |
+| model_versions | parent_model_id | int8 | YES |  |
+| model_versions | calibration_subset_id | int8 | YES |  |
+| participant_source_ids | id | int8 | NO |  |
+| participant_source_ids | participant_id | int8 | NO |  |
+| participant_source_ids | dataset_version_id | int8 | NO |  |
+| participant_source_ids | source_id | text | NO |  |
+| participants | id | int8 | NO |  |
+| participants | pseudonym | text | NO |  |
+| protocol_versions | id | int8 | NO |  |
+| protocol_versions | name | text | NO |  |
+| protocol_versions | version | int4 | NO |  |
+| protocol_versions | gesture_set_id | int8 | NO |  |
+| protocol_versions | schema_version | text | NO |  |
+| protocol_versions | configuration | jsonb | NO |  |
+| recording_channels | id | int8 | NO |  |
+| recording_channels | recording_id | int8 | NO |  |
+| recording_channels | position | int4 | NO |  |
+| recording_channels | source_channel_id | text | NO |  |
+| recording_channels | electrode_description | text | YES |  |
+| recording_sessions | id | int8 | NO |  |
+| recording_sessions | participant_id | int8 | NO |  |
+| recording_sessions | dataset_version_id | int8 | YES |  |
+| recording_sessions | mode | text | NO |  |
+| recording_sessions | status | text | NO |  |
+| recording_sessions | started_at | timestamptz | NO |  |
+| recording_sessions | ended_at | timestamptz | YES |  |
+| recording_sessions | stop_reason | text | YES |  |
+| recordings | id | int8 | NO |  |
+| recordings | session_id | int8 | NO |  |
+| recordings | artifact_id | int8 | NO |  |
+| recordings | source_external_key | text | YES |  |
+| recordings | sample_rate_hz | numeric | NO |  |
+| recordings | sample_count | int8 | NO |  |
+| recordings | canonical_signal_id | int8 | YES |  |
+| run_calibration_items | run_id | int8 | NO |  |
+| run_calibration_items | segment_id | int8 | NO |  |
+| run_idempotency_keys | operation | text | NO |  |
+| run_idempotency_keys | idempotency_key | text | NO |  |
+| run_idempotency_keys | run_id | int8 | NO |  |
+| run_inputs | run_id | int8 | NO |  |
+| run_inputs | split_unit_id | int8 | NO |  |
+| runs | id | int8 | NO |  |
+| runs | kind | text | NO |  |
+| runs | status | text | NO | 'queued'::text |
+| runs | manifest_id | int8 | NO |  |
+| runs | feature_config_id | int8 | NO |  |
+| runs | seed | int8 | NO |  |
+| runs | parameter_schema_version | text | NO |  |
+| runs | parameters | jsonb | NO |  |
+| runs | software_version | text | NO |  |
+| runs | created_at | timestamptz | NO | CURRENT_TIMESTAMP |
+| runs | started_at | timestamptz | YES |  |
+| runs | finished_at | timestamptz | YES |  |
+| runs | failure_reason | text | YES |  |
+| runs | heartbeat_at | timestamptz | YES |  |
+| signal_provenance | signal_id | int8 | NO |  |
+| signal_provenance | artifact_id | int8 | NO |  |
+| signal_provenance | sample_rate_hz | numeric | NO |  |
+| signal_provenance | identity_method_version | text | NO |  |
+| source_recording_keys | dataset_version_id | int8 | NO |  |
+| source_recording_keys | external_key | text | NO |  |
+| source_recording_keys | recording_id | int8 | NO |  |
+| split_manifests | id | int8 | NO |  |
+| split_manifests | name | text | NO |  |
+| split_manifests | version | int4 | NO |  |
+| split_manifests | state | text | NO | 'draft'::text |
+| split_manifests | checksum | bpchar | YES |  |
+| split_manifests | frozen_at | timestamptz | YES |  |
+| split_manifests | protocol_id | int8 | YES |  |
+| split_participants | manifest_id | int8 | NO |  |
+| split_participants | participant_id | int8 | NO |  |
+| split_participants | category | text | NO |  |
+| split_units | id | int8 | NO |  |
+| split_units | manifest_id | int8 | NO |  |
+| split_units | participant_id | int8 | NO |  |
+| split_units | category | text | NO |  |
+| split_units | signal_id | int8 | NO |  |
+| split_units | start_sample | int8 | NO |  |
+| split_units | end_sample | int8 | NO |  |
+| split_units | role | text | NO |  |

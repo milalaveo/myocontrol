@@ -29,7 +29,7 @@ Participant data, restricted datasets, credentials and generated artifacts must 
 
 ## Local services
 
-Database materials are described in the [database overview](database/README.md) and the [data dictionary](database/DATA_DICTIONARY.md). The dictionary covers the original schema and the schemas currently used by the local services.
+Database review materials: [setup and migration instructions](database/README.md), [data dictionary](database/DATA_DICTIONARY.md) and [logical model with ER diagrams](database/LOGICAL_MODEL.md). These documents distinguish the original schema from the schemas currently used by the local services.
 
 Create a local `.env` file with the variables below before using Compose. Choose distinct passwords and do not commit this file. The database and RabbitMQ passwords initialize their respective volumes on first startup; changing the environment alone does not update an existing volume's credentials.
 

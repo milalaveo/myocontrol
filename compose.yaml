@@ -193,11 +193,18 @@ services:
       OTEL_SERVICE_NAME: gateway
       GATEWAY_USERNAME: ${GATEWAY_USERNAME:?Set GATEWAY_USERNAME}
       GATEWAY_PASSWORD: ${GATEWAY_PASSWORD:?Set GATEWAY_PASSWORD}
+      GATEWAY_REQUESTS_PER_MINUTE: ${GATEWAY_REQUESTS_PER_MINUTE:-60}
       DATA_SERVICE_URL: http://data-protocol:8001
       ML_SERVICE_URL: http://ml-experiments:8002
       RECOGNITION_SERVICE_URL: http://recognition:8003
     ports:
       - "127.0.0.1:${GATEWAY_PORT:-8000}:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/live', timeout=3)"]
+      interval: 2s
+      timeout: 5s
+      start_period: 10s
+      retries: 30
     depends_on:
       data-protocol:
         condition: service_healthy

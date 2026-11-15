@@ -1,6 +1,6 @@
 # Database implementation status
 
-This document describes the current implementation and its limits; the Russian requirements remain authoritative. The database is a prototype and must not yet be used for final research results or participant data.
+This document describes the original `myoprosthesis` backend and its limits. Statements about missing APIs or workers below refer to that implementation. The current service schemas, migration setup and relationships are described in the [database overview](README.md), [data dictionary](DATA_DICTIONARY.md) and [logical model](LOGICAL_MODEL.md). The database remains a research prototype; synthetic checks do not validate final research results or participant-data handling.
 
 ## Deployment and access
 
@@ -28,4 +28,6 @@ An artifact verification is an attestation inserted by a trusted service: Postgr
 
 Numbered SQL tests correspond to their migration revisions; Python concurrency tests require `TEST_DATABASE_URL` and leave synthetic rows in the disposable test database. Tests performed so far cover individual constraints, two split freeze/mutation orderings, one segment edit/selection ordering, publication and basic role permissions. They are not a complete acceptance suite.
 
-Still required: DB2 import identity and provenance validation; immutable protocol and gesture concurrency audits; complete calibrated input enforcement against actual model arrays; complete result and comparison compatibility; mathematical metric checks; further role hardening; artifact reconciliation and automated job recovery; end-to-end API integration; execution of the provided PostgreSQL CI workflow; full column-level dictionary and DDL-to-dictionary comparison; representative query plans; and the remaining acceptance cases in the requirements document. Do not describe the EHU criteria as satisfied until these have been implemented and demonstrated.
+The PostgreSQL CI job has successfully exercised migrations, constraints, concurrency checks, API tests, schema isolation and generated DDL on a clean database. The dictionary now lists all 46 SQL-defined business tables across the original and service schemas; column-name coverage has been compared against the migration files. Migration bookkeeping is documented separately. The separate Compose smoke job still requires investigation.
+
+Still required for final research/production use: DB2 import identity and provenance validation; further protocol and gesture concurrency audits; complete calibrated input enforcement against actual model arrays; complete result and comparison compatibility; mathematical metric checks; further role hardening; artifact reconciliation; representative query plans; and participant-data retention procedures. These limitations must be distinguished from the narrower database submission checklist.

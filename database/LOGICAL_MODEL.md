@@ -1,71 +1,118 @@
-# Logical database model
+﻿# Logical database model
 
-Status: proposed logical design. Names, keys and enforcement details must be verified in migrations and integration tests. The requirements in `docs/DATABASE_REQUIREMENTS.md` remain authoritative. This document does not claim that a database has been implemented.
+This document describes implemented relationships. The current Compose application uses three service-owned schemas. The original `myoprosthesis` schema is a separate implementation used by the earlier backend. See the [data dictionary](DATA_DICTIONARY.md) for fields and keys and the [database overview](README.md) for migration commands.
 
-## Architecture and scope
+## Current service schemas
 
-PostgreSQL 18 stores operational state, references, experiment provenance and queryable results. Large signals, cached features, models and optional detailed prediction events live in controlled file or object storage. An artifact record stores a stable storage key, size and checksum; a storage key is not evidence that the file exists or is accessible. SQLAlchemy 2.0 with psycopg 3 is the planned Python access layer; Alembic manages versioned migrations. Exact dependency and image versions will be pinned and tested during implementation.
+Each service uses its own database login and schema. Cross-service UUIDs are external references validated through APIs; they are not cross-schema foreign keys.
 
-Participants are pseudonymous; identity and consent information belong in a separate managed store. A participant's cross-source identity may be unknown, which must be documented as a limitation rather than assumed absent. Application accounts, if introduced, are separate from research participants.
+### Data & Protocol
 
-## Logical relationships
-
-The diagram highlights the provenance path. Junction tables and additional relationships are described in the dictionary. Cardinalities show optionality at this level; the dictionary and eventual DDL define conditional requirements.
+The following links are foreign keys within `data_protocol`. Participant allocation uses a composite key containing manifest, participant and category. Synthetic splits have two distinct foreign keys to recordings.
 
 ```mermaid
 erDiagram
-    DATASET ||--o{ DATASET_VERSION : has
-    DATASET_VERSION ||--o{ PARTICIPANT_SOURCE_ID : identifies
-    PARTICIPANT ||--o{ PARTICIPANT_SOURCE_ID : has
-    PARTICIPANT ||--o{ RECORDING_SESSION : participates
-    RECORDING_SESSION ||--o{ RECORDING : contains
-    ARTIFACT ||--o{ RECORDING : stores
-    RECORDING ||--|{ RECORDING_CHANNEL : contains
-    RECORDING ||--o{ LABELLED_SEGMENT : contains
-    GESTURE_SET_VERSION ||--|{ GESTURE_SET_MEMBER : contains
-    GESTURE ||--o{ GESTURE_SET_MEMBER : belongs_to
-    GESTURE ||--o{ LABELLED_SEGMENT : labels
-    SPLIT_MANIFEST ||--o{ SPLIT_PARTICIPANT : assigns
-    PARTICIPANT ||--o{ SPLIT_PARTICIPANT : assigned
-    SPLIT_MANIFEST ||--o{ SPLIT_UNIT : includes
-    RECORDING ||--o{ SPLIT_UNIT : references
-    LABELLED_SEGMENT o|--o{ SPLIT_UNIT : optionally_references
-    SPLIT_MANIFEST ||--o{ CALIBRATION_SUBSET : defines
-    PARTICIPANT ||--o{ CALIBRATION_SUBSET : calibrates
-    CALIBRATION_SUBSET ||--o{ CALIBRATION_ITEM : contains
-    SPLIT_UNIT ||--o{ CALIBRATION_ITEM : selected_from
-    FEATURE_CONFIG ||--o{ RUN : uses
-    RUN ||--o| MODEL_VERSION : produces
-    MODEL_VERSION o|--o{ MODEL_VERSION : parent_of
-    CALIBRATION_SUBSET o|--o{ MODEL_VERSION : adapts
-    MODEL_VERSION ||--o{ EVALUATION : evaluated_by
-    SPLIT_MANIFEST ||--o{ EVALUATION : defines_test_for
-    EVALUATION ||--o{ EVALUATION_METRIC : reports
-    EVALUATION ||--o{ CONFUSION_COUNT : reports
-    MODEL_VERSION ||--o{ RECOGNITION_SESSION : drives
+    participants ||--o{ recordings : owns
+    recordings ||--o{ labelled_segments : contains
+    recordings ||--o{ synthetic_splits : source_recording
+    recordings ||--o{ synthetic_splits : test_recording
+    protocol_versions ||--o{ research_manifests : governs
+    research_manifests ||--o{ manifest_participants : assigns
+    participants ||--o{ manifest_participants : participates
+    manifest_participants ||--o{ manifest_units : allocates
+    labelled_segments ||--o{ manifest_units : selected_as
+    manifest_participants ||--o{ calibration_subsets : calibrates
+    calibration_subsets ||--o{ calibration_items : contains
+    manifest_units ||--o{ calibration_items : selected_from
 ```
 
-## Design decisions and invariants
+Segments use half-open `[start_sample, end_sample)` coordinates. Triggers check recording bounds, participant ownership and split role/category compatibility. Freezing a research manifest validates required source/test membership, classes and cross-role overlap, computes its checksum and protects referenced metadata. Overlap detection uses artifact hashes; identifying transformed copies and participants across sources remains **TBD**.
 
-1. **Recording identity.** An imported recording has a source-version-specific external key. A canonical signal identity and original sample coordinates must be preserved independently of import identity so re-importing the same signal cannot bypass split checks. The identity derivation and treatment of transformed copies must be specified when the DB2 importer is designed; checksums of arbitrary containers alone do not prove signal identity.
-2. **Sample intervals.** Segments use half-open `[start, end)` integer sample intervals relative to the canonical recording. Whole-recording units resolve to the full interval. Segment boundaries are validated against the recording's sample count. Overlap checks compare the same canonical signal, including duplicate imports.
-3. **Manifest membership.** Each participant has one category per manifest. Each unit has one permitted role consistent with its participant's category. Source, development and final target participants cannot overlap within a manifest. Calibration and test for the same target are allowed only on non-overlapping units. Versioned protocol rules define the precise unit and role policy.
-4. **Freeze.** A manifest is mutable only in draft. Every membership mutation and freeze operation must acquire the same manifest-level lock before checking state or membership. A database function returns conflict identifiers; a procedure validates and freezes atomically. A trigger guards direct changes, including updates, deletes and moving rows between manifests. Canonical serialization, ordering, included hashes and checksum algorithm will be defined before implementing freeze; frozen content and referenced provenance must not be mutable in a way that invalidates the checksum. Corrections create a new version.
-5. **Budgets.** A subset belongs to one frozen manifest and target participant; each item must resolve to an eligible calibration unit and labelled repetition for that participant. A versioned selection order or explicit parent relation must establish nested budgets. Count distinct repetitions and compute unique duration as the union of sample intervals, not a sum of potentially overlapping segments. Completeness of required classes is checked before adaptation.
-6. **Model and evaluation provenance.** A run records its inputs, feature configuration, parameters, software versions and seed. A model refers to its producing run and artifact; personalised models also reference a source parent and calibration subset, and target-only models reference the same subset used for comparison. An evaluation identifies its model, target, frozen manifest, protocol and exact test membership. A comparison must check compatibility, including test membership, class mapping and feature/protocol versions, and expose missing runs.
-7. **Publication and recovery.** Long computation happens outside an open database transaction. Write an artifact to a temporary location, publish it under a stable key, verify checksum and availability, then transactionally publish its metadata, result references and terminal job state. File storage and PostgreSQL do not share an atomic transaction: a documented reconciliation process detects orphan files and missing artifacts. Retry uses operation-scoped idempotency keys; deliberate research reruns receive new IDs.
-8. **Recognition.** A session refers to a published model and input configuration. Replay identifies its source recording or immutable input manifest. State, stop reason and aggregate timing counts are queryable; detailed events may be a versioned artifact. Neutral-state safety is enforced by the application and tested end to end, not assumed from database constraints.
+Calibration selections reference target participants in frozen manifests. Items must belong to eligible calibration units. Freeze validates per-gesture budgets, including rest, and nesting within a selection series. The `calibration_durations` view computes unique seconds from interval unions.
 
-## Integrity and access boundaries
+### ML Experiments
 
-Database constraints enforce identity, foreign keys, allowed values and published-state invariants, including checks on direct SQL writes. Cross-row rules requiring serialization use procedures and triggers. The service validates actual inputs and permitted fit roles before windowing and training. Integration tests must cover both boundaries, including concurrent freeze and mutation.
+```mermaid
+erDiagram
+    source_lda_runs ||--o| outbox_events : publishes
+```
 
-Planned roles are `app_read`, `app_write` and a separate migration/administration role. Neither application role is a superuser or schema owner. Grants are applied and tested for new objects as well as existing ones; access to sensitive artifacts is controlled separately from metadata access. Direct identifiers and consent are not stored in this operational schema. Authorized deletion and backup/retention policy need a documented procedure compatible with provenance restrictions.
+`signal_summary_jobs` is an independent table referring to an external synthetic split UUID. `source_lda_runs` stores external manifest/participant UUIDs, an input snapshot, model JSON, evaluation JSON, checksums and tracing context. Guarded states are `queued`, `running`, `succeeded`, `failed` and `interrupted`. Terminal runs are immutable. A unique foreign key permits at most one outbox event per run; results and publication events are persisted in one local transaction.
 
-## Open design work
+### Recognition
 
-- Specify exact identity rules for DB2 repetitions, cross-import signal identity and source label mapping after inspecting real input files.
-- Define canonical manifest serialization, checksum scope, immutable dependencies and the precise lock/trigger implementation.
-- Define calibration selection order, test membership snapshot and compatibility rules at protocol version level.
-- Select storage and backup details, interruption detection, role grants and the exact artifact reconciliation process.
-- Produce physical DDL, a column-level dictionary, SQL migration output, reference seeds and acceptance tests together so documentation and schema stay aligned.
+`replay_sessions` stores external model-run and recording UUIDs, status, checksum, output JSON and error text. `model_events` stores received publication events; the event primary key supports idempotent consumption. These tables have no foreign keys to each other or to another service. Redis caches model data outside the relational schema.
+
+## Original backend: myoprosthesis
+
+These diagrams describe the SQL model through Alembic revision `0016_snapshot_locks`. Optional foreign keys permit draft or partial rows; triggers impose additional conditions before freeze/publication.
+
+### Source metadata and splits
+
+```mermaid
+erDiagram
+    datasets ||--o{ dataset_versions : versions
+    dataset_versions ||--o{ participant_source_ids : identifies
+    participants ||--o{ participant_source_ids : maps
+    participants ||--o{ recording_sessions : participates
+    dataset_versions o|--o{ recording_sessions : imported_from
+    recording_sessions ||--o{ recordings : contains
+    artifacts ||--o{ recordings : stores
+    recordings ||--o{ recording_channels : has
+    participants ||--o{ canonical_signals : owns
+    canonical_signals o|--o{ recordings : identifies
+    canonical_signals ||--o| signal_provenance : records
+    artifacts ||--o{ signal_provenance : source_artifact
+    dataset_versions ||--o{ source_recording_keys : namespaces
+    recordings ||--o| source_recording_keys : maps
+    canonical_signals ||--o{ labelled_segments : contains
+    gestures ||--o{ labelled_segments : labels
+    gesture_sets ||--o{ gesture_set_members : includes
+    gestures ||--o{ gesture_set_members : belongs_to
+    gesture_sets ||--o{ protocol_versions : defines_classes
+    protocol_versions o|--o{ split_manifests : governs
+    split_manifests ||--o{ split_participants : assigns
+    participants ||--o{ split_participants : participates
+    split_participants ||--o{ split_units : allocates
+    canonical_signals ||--o{ split_units : references
+    split_participants ||--o{ calibration_subsets : calibrates
+    gesture_sets o|--o{ calibration_subsets : required_classes
+    calibration_subsets o|--o{ calibration_subsets : parent
+    calibration_subsets ||--o{ calibration_items : contains
+    labelled_segments ||--o{ calibration_items : selects
+```
+
+Split units reference canonical signals directly. Calibration items reference labelled segments; triggers validate their eligibility within calibration split intervals. Canonical identities and original sample coordinates allow split validation independently of import metadata. Artifact records store locations, sizes and SHA-256 values; PostgreSQL cannot prove file existence or verify bytes by itself.
+
+### Experiments and results
+
+```mermaid
+erDiagram
+    feature_configs ||--o{ runs : configures
+    split_manifests ||--o{ runs : defines_inputs
+    runs ||--o{ run_inputs : consumes
+    split_units ||--o{ run_inputs : selected
+    runs ||--o{ run_calibration_items : consumes
+    labelled_segments ||--o{ run_calibration_items : selected
+    runs ||--o| run_idempotency_keys : deduplicates
+    runs ||--o| model_versions : produces
+    artifacts ||--o{ model_versions : stores
+    artifacts ||--o| artifact_verifications : attests
+    model_versions o|--o{ model_versions : parent
+    calibration_subsets o|--o{ model_versions : calibration
+    runs ||--o| evaluations : evaluates
+    model_versions ||--o{ evaluations : evaluated_model
+    participants ||--o{ evaluations : target
+    evaluations ||--o{ evaluation_metrics : reports
+    evaluations ||--o{ confusion_counts : reports
+    gestures ||--o{ confusion_counts : actual_class
+    gestures ||--o{ confusion_counts : predicted_class
+```
+
+Runs preserve parameters, feature configuration, software version, seed and explicit input membership. Publication triggers validate model/calibration compatibility, artifact verification attestations, target test membership and required metrics. Views expose published models, completed evaluations and reviewer metrics; calibration views compute interval unions and durations.
+
+## Scope and limitations
+
+The current services implement source-only LDA and replay on synthetic recordings. The original schema also models SVM/MLP families and personalised/target-only conditions; these definitions do not establish implemented training flows. Replay persistence belongs to `recognition.replay_sessions`; the original schema has no recognition-session table.
+
+**TBD:** validated real-data import and identity rules, participant consent/retention procedures, final research comparison rules and production access policies. See [original implementation status](IMPLEMENTATION.md) and [service architecture](../architecture/README.md) for further scope information.

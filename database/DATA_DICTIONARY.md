@@ -46,8 +46,9 @@ The local Docker Compose application currently migrates and uses `data_protocol`
 | | `segment_id` | `uuid` | FK → `labelled_segments.id`, NOT NULL | Segment assigned to this unit. |
 | | `role` | `text` | NOT NULL; role/category compatibility check; UNIQUE with manifest, segment and role | `source_train`, `development_validation`, `target_calibration` or `target_test`. |
 | `synthetic_splits` | `id` | `uuid` | PK | Identifier for a synthetic split fixture. |
-| | `manifest_id` | `uuid` | NOT NULL | Manifest associated with the fixture. |
-| | `payload` | `jsonb` | NOT NULL | Synthetic split payload used by the test flow. |
+| | `source_recording_id` | `uuid` | NOT NULL; FK → `recordings.id` | Source training recording. |
+| | `test_recording_id` | `uuid` | NOT NULL; FK → `recordings.id`; different from source | Held-out test recording. |
+| | `checksum` | `varchar(64)` | NOT NULL; SHA-256 format | Immutable split checksum computed by a trigger. |
 | `calibration_subsets` | `id` | `uuid` | PK | Calibration subset identifier. |
 | | `manifest_id` | `uuid` | Composite FK → `manifest_participants` | Frozen research manifest. |
 | | `participant_id` | `uuid` | Composite FK → `manifest_participants` | Target participant. |
@@ -139,7 +140,7 @@ These tables are created by `database/migrations/` and are used by the earlier b
 | `protocol_versions` | `id bigint*`, `name text`, `version integer`, `gesture_set_id bigint`, `schema_version text`, `configuration jsonb` | Immutable versioned experimental protocol; gesture set FK; unique name/version. |
 | `calibration_subsets` | `id bigint*`, `manifest_id bigint`, `participant_id bigint`, `category text`, `budget_per_gesture integer`, `selection_version text`, `parent_id bigint`, `state text`, `gesture_set_id bigint` | Target calibration selection; manifest participant, parent subset and gesture set references. |
 | `calibration_items` | `subset_id bigint*`, `segment_id bigint*` | Segment membership in calibration subset. |
-| `feature_configs` | `id bigint*`, `name text`, `version integer`, `schema_version text`, `configuration jsonb` | Versioned feature extraction configuration. |
+| `feature_configs` | `id bigint*`, `name text`, `version integer`, `schema_version text`, `parameters jsonb` | Versioned feature extraction configuration. |
 | `runs` | `id bigint*`, `kind text`, `status text`, `manifest_id bigint`, `feature_config_id bigint`, `seed bigint`, `parameter_schema_version text`, `parameters jsonb`, `software_version text`, `created_at timestamptz`, `started_at timestamptz`, `finished_at timestamptz`, `failure_reason text`, `heartbeat_at timestamptz` | Experiment execution state and immutable configuration; manifest and feature configuration FKs. |
 | `run_inputs` | `run_id bigint*`, `split_unit_id bigint*` | Explicit split units consumed by a run. |
 | `run_calibration_items` | `run_id bigint*`, `segment_id bigint*` | Calibration segments consumed by a model run. |
@@ -155,6 +156,17 @@ For clarity, the original-schema rows above list every final table column. The t
 Read-only views are `reviewer_metrics`, `published_models`, `completed_evaluations`, `calibration_samples`, and `calibration_durations`; their projected columns are defined by the `CREATE VIEW` statements in `database/migrations/`.
 
 ## Migration source of truth
+
+### Migration bookkeeping
+
+| Table | Column | PostgreSQL type | Keys and rules | Meaning |
+|---|---|---|---|---|
+| `public.service_schema_migrations` | `service` | `text` | NOT NULL; composite PK with `name` | Service owning the migration. |
+| | `name` | `text` | NOT NULL; composite PK with `service` | Applied SQL filename. |
+| | `checksum` | `char(64)` | NOT NULL | SHA-256 of normalized migration source. |
+| | `applied_at` | `timestamptz` | NOT NULL; default current timestamp | Application timestamp. |
+
+Alembic separately creates `public.alembic_version` with `version_num varchar(32)` as its primary key to track the original schema revision.
 
 - Original backend: `database/alembic.ini`, `database/migrations/` and `database/schema.sql`.
 - Local Compose services: `services/data_protocol/migrations/`, `services/ml_experiments/migrations/`, `services/recognition/migrations/`; applied by `services/migrator/migrate.py`.

@@ -1,5 +1,9 @@
 # Backup and restore
 
+## Accepted recovery scope
+
+The [accepted architecture](../docs/ARCHITECTURE_DECISIONS.md) requires cloud operator/model/result persistence plus separately recoverable Electron pending data and local training provenance. The current backup utility below covers only the documented development database/signal volumes; it does not yet demonstrate recovery of future cloud identity, complete model packages, client caches or synchronization. Production backup scope must include every authoritative artifact store and be verified by a full restore exercise.
+
 Run `python deploy/backup.py` from the repository root while the `myocontrol` Compose project is running. It writes a custom-format PostgreSQL dump, copies signal files and records SHA-256 checksums under the Git-ignored `data/backups/` directory. Database and container names can be changed through command-line options; use `python deploy/backup.py --help` for details.
 
 The database snapshot is taken before the signal copy. This relies on the service publishing immutable signal files before committing database references and on no external process modifying or deleting those files during backup. A backup may contain additional unreferenced files. Temporary files and RabbitMQ, Redis, Loki, Prometheus, Grafana and Jaeger state are not included. Model outbox events in PostgreSQL are included, but broker messages already marked published are not; broker recovery and event reconciliation are TBD. The backup contains potentially sensitive data and must be protected and retained according to the approved data policy.

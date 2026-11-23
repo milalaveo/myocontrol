@@ -1,5 +1,9 @@
 # Backend
 
+## Scope relative to the accepted architecture
+
+This is the historical backend implementation. [ADR-001](../docs/ARCHITECTURE_DECISIONS.md) defines cloud persistence/research APIs, general training on a powerful local workstation, and a packaged Electron runtime for local calibration/adaptation/live. The historical code below is not a desktop bundle or a remote-worker implementation. Current service behaviour is documented under `services/`.
+
 The backend contains the local artifact store, a source-only model publication path and a synthetic persistence workflow. Application code is in `src/myoprosthesis`; tests are in `tests`.
 
 ## Synthetic workflow

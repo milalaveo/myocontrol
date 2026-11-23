@@ -1,5 +1,15 @@
 # ML Experiments Service
 
+## Database extension available
+
+The additive SQL migrations and [database acceptance tests](../../database/README_TEACHER.md) now provide identity persistence (separate schema), source/publication metadata, generic ML registry/leases/packages/evaluations and terminal desktop reports in their owning schemas. Existing endpoints still use their original tables; this does not automatically implement new cloud or Electron contracts.
+
+## Accepted execution boundary
+
+Per [ADR-001](../../docs/ARCHITECTURE_DECISIONS.md), cloud ML APIs own job/model/result metadata and publication, while **general training and batch evaluation execute on a powerful local workstation**. Interactive calibration/adaptation executes in Electron. External workers retrieve inputs/jobs and publish outputs through authenticated APIs, not direct cloud database access.
+
+The existing worker below polls its own PostgreSQL schema in a single-host development Compose. Remote job leasing/heartbeat/publication APIs, reproducible workstation packaging and method-specific adaptation packages are not yet implemented. General training must not be moved to cloud compute merely because job submission uses a web page.
+
 The service retrieves frozen manifests and signals from the Data and Protocol API. It implements a synthetic signal-summary job and an initial source-only shrinkage LDA experiment. The experiment extracts versioned four-channel time-domain features, fits only source data and evaluates on the selected target test. Models and metrics are stored in its own PostgreSQL schema. Results on synthetic signals are infrastructure checks, not evidence of performance on measured EMG.
 
 Set `ML_DATABASE_URL` to a SQLAlchemy PostgreSQL URL, set `DATA_SERVICE_URL` to the Data and Protocol service address and apply `migrations/0001_summary_jobs.sql` to a disposable database. Install `requirements.txt`, then run from this directory:

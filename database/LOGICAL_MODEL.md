@@ -1,10 +1,18 @@
 ﻿# Logical database model
 
-This document describes implemented relationships. The current Compose application uses three service-owned schemas. The original `myoprosthesis` schema is a separate implementation used by the earlier backend. See the [data dictionary](DATA_DICTIONARY.md) for fields and keys and the [database overview](README.md) for migration commands.
+## Accepted target versus existing schema
+
+The accepted [ADR-001](../docs/ARCHITECTURE_DECISIONS.md) now has additive persistence migrations: `identity/0001`, `data_protocol/0006`, `ml_experiments/0007` and `recognition/0003`. They add operator/client/session records, publication provenance/receipts, a generic run/model/package/evaluation registry and desktop reports. See the [teacher guide](README_TEACHER.md), [current logical diagrams](SERVICE_MODEL.md) and [generated service dictionary](SERVICE_DATA_DICTIONARY.md). HTTP identity, authenticated worker APIs and actual Electron synchronization remain application work; schema support does not establish a completed runtime.
+
+This document describes implemented relationships. The migrator installs four persistence schemas, including the new identity boundary; this does not add a fourth running business API. The original `myoprosthesis` schema is a separate implementation used by the earlier backend. See the [data dictionary](DATA_DICTIONARY.md) for fields and keys and the [database overview](README.md) for migration commands.
 
 ## Current service schemas
 
 Each service uses its own database login and schema. Cross-service UUIDs are external references validated through APIs; they are not cross-schema foreign keys.
+
+### Identity and additive cloud/local registry
+
+The [current service diagrams](SERVICE_MODEL.md) include operator/client/session FKs, original recording provenance/client receipts, generic experiments/models/artifacts/packages/evaluations and desktop summaries. [Generated column/constraint inventory](SERVICE_DATA_DICTIONARY.md) and [service DDL](service_schema.sql) describe the physical implementation. The diagrams below also document the preserved pre-registry and historical relationships; no data has been silently moved between them.
 
 ### Data & Protocol
 

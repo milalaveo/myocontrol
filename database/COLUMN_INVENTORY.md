@@ -1,6 +1,6 @@
 ﻿# Physical column inventory
 
-Generated from PostgreSQL information_schema at migration 0016. Types use PostgreSQL internal names. Keys, checks, units, sources and semantic definitions remain documented in the migration SQL and logical dictionary; this inventory is not yet the complete data dictionary required by the project.
+**Historical scope:** generated from `myoprosthesis` at Alembic 0016. Types use PostgreSQL internal names. For all current service columns, keys, CHECKs and indexes use [SERVICE_DATA_DICTIONARY.md](SERVICE_DATA_DICTIONARY.md), generated from identity/Data/ML/Recognition. See [teacher guide](README_TEACHER.md) for verification. This historical inventory is retained separately from the current service dictionary.
 
 | Table | Column | Type | Nullable | Default |
 | --- | --- | --- | --- | --- |

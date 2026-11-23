@@ -1,5 +1,15 @@
 # Data and Protocol Service
 
+## Database extension available
+
+The additive SQL migrations and [database acceptance tests](../../database/README_TEACHER.md) now provide identity persistence (separate schema), source/publication metadata, generic ML registry/leases/packages/evaluations and terminal desktop reports in their owning schemas. Existing endpoints still use their original tables; this does not automatically implement new cloud or Electron contracts.
+
+## Accepted data placement
+
+[ADR-001](../../docs/ARCHITECTURE_DECISIONS.md) makes cloud APIs/storage authoritative for published research metadata and permitted artifacts. Electron collects/validates local calibration/recording data and uploads pending records idempotently. The local training worker obtains permitted frozen inputs through APIs. Neither client connects directly to PostgreSQL.
+
+Cloud operator authorization, robust provenance/publication and synchronization contracts are requirements; the current synthetic-only service below does not yet provide them. Research participants remain separate from operator accounts.
+
 This service provides PostgreSQL-backed participant, four-channel recording, protocol, labelled segment, split and calibration APIs. It is not production-ready and must be used only with synthetic data in a trusted local environment.
 
 Install `requirements.txt`. Set `DATA_DATABASE_URL` to a SQLAlchemy `postgresql+psycopg` URL, set `DATA_ARTIFACT_ROOT` to a controlled local directory, and apply the SQL files in `migrations/` in order to a disposable PostgreSQL database. From this directory run:

@@ -1,5 +1,9 @@
 # Ninapro DB2 ingestion pilot
 
+## Accepted execution and publication context
+
+[ADR-001](../docs/ARCHITECTURE_DECISIONS.md) keeps general training/batch experiments on a powerful local workstation, publishes approved metadata/models/results through cloud APIs, and reserves local live/calibration for Electron. This script remains an ingestion pilot; it is not a production importer, a research training package, a cloud deployment or an Electron recording path. Its local receipt does not replace database-backed publication/provenance.
+
 `import_ninapro_pilot.py` imports one second each of rest and Exercise B movements 5, 6, 13 and 14 from subject 1, exercise E1. It uses refined `restimulus` and `rerepetition` arrays and keeps excerpts inside contiguous intervals with unchanged label and repetition. No split, calibration selection or training job is created.
 
 Download subject 1 from the [official DB2 page](https://ninapro.hevs.ch/instructions/DB2.html) and place `DB2_s1.zip` in `data/raw/ninapro-db2/`. Consult the dataset's terms and cite the associated publication when reporting results. The archive retains all twelve original channels and exercises. The current pilot does not redistribute source data.

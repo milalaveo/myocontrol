@@ -1,6 +1,18 @@
 ﻿# Database
 
+## Accepted persistence target
+
+[ADR-001](../docs/ARCHITECTURE_DECISIONS.md) places operator accounts, published models, research metadata and experiment results in the cloud. Electron retains prepared packages and unpublished local work and synchronizes through APIs; external training workers also use APIs rather than database credentials. Large artifacts remain in controlled file/object storage.
+
+New migrations now implement operator/client/session persistence, recording publication receipts/provenance, generic model/run/package/evaluation records and terminal desktop reports. HTTP authentication, cross-service authorization and transfer/runtime integration still require application code. Start review with [README_TEACHER.md](README_TEACHER.md), [current diagrams](SERVICE_MODEL.md), [generated dictionary](SERVICE_DATA_DICTIONARY.md) and [service DDL](service_schema.sql).
+
 The project uses PostgreSQL 18, SQLAlchemy 2.0 and psycopg 3. The current Compose application uses `data_protocol`, `ml_experiments` and `recognition`. The earlier backend uses a separate `myoprosthesis` schema managed with Alembic. Compose does not migrate historical data between these implementations.
+
+## New identity and registry layer
+
+`identity` has its own isolated NOLOGIN group and optional login provisioning via `IDENTITY_DB_PASSWORD`; normal existing Compose requires no new secret. Set a distinct environment password only when an identity adapter will consume that login. The current gateway remains shared development Basic auth.
+
+The new generic ML registry coexists with `source_lda_runs`; no implicit backfill or model conversion is performed. Account IDs in another service schema are API-validated external UUIDs. The cloud/desktop/worker clients do not receive database credentials.
 
 ## Materials for review
 
@@ -57,6 +69,6 @@ Generate original-schema SQL without applying it using `python -m alembic -c dat
 
 The [Database checks workflow](../.github/workflows/database.yml) tests original migrations, constraints, concurrency, service APIs and schema isolation, and applies generated SQL on a clean database. Numbered SQL tests target particular migration revisions; run them on disposable databases in workflow order.
 
-The service migrator was also run on an isolated empty PostgreSQL 18 instance: 5 Data & Protocol, 6 ML Experiments and 2 Recognition migrations completed successfully. This verifies schema creation; synthetic tests do not establish recognition performance on measured signals.
+The baseline 13 migrations were previously exercised on PostgreSQL 18. The new 17-migration state was verified locally on PostgreSQL 16.3 with repeat/upgrade checks, 18 acceptance tests, DDL restore and existing service tests. CI is configured to repeat on PostgreSQL 18. See the teacher guide for reproducible commands; no synthetic check establishes recognition performance on measured EMG.
 
 **TBD:** validated real-data identity rules, final research comparison rules, participant-data governance and a complete backup/retention policy. Local backup and partial restore instructions are in [deploy](../deploy/RESTORE.md).

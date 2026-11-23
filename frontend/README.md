@@ -1,5 +1,11 @@
 ﻿# Myocontrol operator interface
 
+## Accepted client split — target, not implemented
+
+The [accepted decision](../docs/ARCHITECTURE_DECISIONS.md) separates an **adaptive cloud research portal** from an **Electron local-control client**. Both can reuse React/Carbon components. Desktop Python/SDK lifecycle is managed by Electron; acquisition, calibration/adaptation, live recognition and replay execute locally. Cloud pages manage operators, protocols, model versions, jobs and results. Mobile/tablet acceptance applies only to the cloud portal.
+
+The current directory still builds the browser prototype below. No Electron main/preload process, bundled native runtime or installers are implemented yet. Prepared desktop offline use and idempotent synchronization are target requirements, not existing browser behaviour.
+
 React + TypeScript + Vite workspace for inspecting four-channel EMG, viewing a procedural hand, and using the existing local service APIs. All UI text is English.
 
 ## Run with Docker

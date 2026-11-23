@@ -142,11 +142,22 @@ jobs:
         run: |
           set -euo pipefail
           createdb thesis_service_roles_test
-          for file in services/data_protocol/migrations/*.sql services/ml_experiments/migrations/*.sql services/recognition/migrations/*.sql; do
+          for file in services/identity/migrations/*.sql services/data_protocol/migrations/*.sql services/ml_experiments/migrations/*.sql services/recognition/migrations/*.sql; do
             psql -X -v ON_ERROR_STOP=1 -d thesis_service_roles_test -f "$file"
           done
           psql -X -v ON_ERROR_STOP=1 -d thesis_service_roles_test -f database/service_roles.sql
           psql -X -v ON_ERROR_STOP=1 -d thesis_service_roles_test -f database/tests/service_roles.sql
+      - name: Check cloud persistence and upgrade acceptance
+        shell: bash
+        run: |
+          set -euo pipefail
+          createdb myocontrol_review_ci
+          TEST_DATABASE_URL='postgresql://thesis_test:test-only@localhost:5432/myocontrol_review_ci' \
+            python database/review_database.py
+          createdb myocontrol_review_snapshot
+          psql -X -v ON_ERROR_STOP=1 -d myocontrol_review_snapshot -f database/service_schema.sql
+          TEST_DATABASE_URL='postgresql://thesis_test:test-only@localhost:5432/myocontrol_review_snapshot' \
+            python database/review_database.py
       - name: Enforce backend coverage
         shell: bash
         env:

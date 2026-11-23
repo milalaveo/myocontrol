@@ -2,65 +2,53 @@
 
 Status: partially implemented prototype. Three independently packaged services, a local gateway, isolated PostgreSQL schemas, synthetic source-only LDA evaluation, replay and RabbitMQ model events are implemented. The existing prototype remains in its original PostgreSQL schema; it has not been migrated to the service schemas. This document describes the target and explicitly identifies remaining work.
 
-## Goals
+## Accepted target deployment
 
-The system separates data stewardship, experimental computation and low-latency recognition. Recognition must continue an active replay when the experiment service becomes unavailable, provided the model and input are already available locally. Training may run for longer than an HTTP request. The acquisition process must remain close to the Bluetooth device.
+[ADR-001](../docs/ARCHITECTURE_DECISIONS.md) supersedes earlier physical-placement and client-delivery proposals. See the [deployment diagram](../docs/DEPLOYMENT_ARCHITECTURE.md), [PNG](../docs/DEPLOYMENT_ARCHITECTURE.png) and [design PRD](../docs/DESIGN_PRD.md).
 
-## Business services
+| Boundary | Responsibility |
+| --- | --- |
+| Cloud | Operator accounts/authorization, research metadata/protocols, model registry/artifacts, experiment results, job coordination and adaptive web portal. |
+| Powerful local workstation | General LDA/SVM/MLP training and batch experiments/evaluation through reproducible worker tooling. |
+| Electron client | Bundled local React UI/Python/PLUX SDK, acquisition, calibration/adaptation, live/replay, virtual hand and recoverable local records. |
 
-| Service | Bounded context | Owns | Does not own |
-| --- | --- | --- | --- |
-| Data & Protocol | Source ingestion, recording metadata and experimental data allocation | Participants, source versions, recording metadata, channels, labels, canonical signal identity, artifact references, protocol versions, split manifests, calibration subsets | Models, experiment execution and recognition sessions |
-| ML Experiments | Training, adaptation, evaluation and publication | Experiment jobs, training inputs and immutable provenance snapshots, feature/model configuration, model versions, evaluation results, model artifacts | Source recordings and split definitions |
-| Recognition | Live or recorded inference and simulated-hand commands | Recognition sessions, local model cache metadata, session status and timing summaries | Model training and canonical source metadata |
+General training is not cloud computation. Per-window inference never depends on cloud requests. The prepared Electron session does not depend on an available training workstation. Mac mini hardware is a hosting option, not a mandatory architectural node. Provider and resource sizing remain open.
 
-The experiment worker is a process in the ML context, not a fourth business service. A local recognition deployment hosts the device adapter when BITalino is attached locally. An API gateway and the web interface are infrastructure and are not counted as business services.
+## Business ownership and execution
 
-```mermaid
-flowchart LR
-    Client[Web interface] -->|HTTPS JSON| Gateway[API gateway]
-    Gateway -->|HTTP v1| Data[Data & Protocol]
-    Gateway -->|HTTP v1| ML[ML Experiments]
-    Gateway -->|HTTP v1| Recognition[Recognition]
-    ML -->|HTTP v1: frozen manifest and authorized artifact access| Data
-    Recognition -->|HTTP v1: published model and metadata| ML
-    Recognition -->|HTTP v1: replay source metadata and access| Data
-    Data --> DataDB[(PostgreSQL: data schema)]
-    ML --> MLDB[(PostgreSQL: experiments schema)]
-    Recognition --> RecDB[(PostgreSQL: recognition schema)]
-    Worker[ML worker] --> MLDB
-    Worker -->|HTTP v1| Data
-    Device[BITalino] -->|Bluetooth| Recognition
-    Recognition --> Hand[Simulated hand]
-```
+| Domain | Cloud-owned state | Execution |
+| --- | --- | --- |
+| Data & Protocol | Participants/source identities, recording/artifact metadata, labels, class sets, protocols, frozen manifests and published calibration subsets | Cloud validation/publication; Electron collects/reviews local samples and submits pending data. |
+| ML Experiments | Jobs, input snapshots, configuration, model/version metadata, evaluations and package publication | General/batch computation on the local training workstation; interactive calibration/adaptation in Electron. |
+| Recognition | Centrally published session summaries/results where applicable | Local Electron Python runtime: SDK, ordered input processing, prediction/commands, neutral handling and timing. |
 
-Gateway and worker arrows are included when calculating synchronous request paths. Long-running work is queued: the client receives a job ID rather than waiting for training. No synchronous request may call more than three business services; the first critical flow uses a direct ML-to-Data request and no circular dependency. Exact gateway counting and the institution's interpretation should be confirmed during review.
+Operator identity is cloud-managed and distinct from participants; provider/session/schema ownership must be specified. This does not require inventing another independently deployed business service. Web and Electron are separate client surfaces with reusable UI code.
+
+## Target job and publication contract
+
+The cloud accepts an authenticated research job with frozen inputs and a stable ID. A separately installed local worker claims an eligible attempt, obtains authorized input artifacts, verifies hashes/contracts, reports progress/heartbeat and uploads results. The cloud validates completeness and publishes metadata/artifacts transactionally within the owning service boundary. It does not execute general fitting. Unavailable workers leave queued/unavailable work; disconnected or stale attempts follow explicit recovery rules.
+
+External workers and Electron do not access PostgreSQL directly or query another service's schema. Use scoped API credentials, operation-specific idempotency and bounded retries. Source-only/general models and their required adaptation material are published as versioned compatible packages.
+
+Local adaptation produces a personal model with source parent, exact target calibration membership, method/configuration and integrity metadata. LDA statistics, SVM fixed source pools and MLP replay pools must be included where the specified method requires them. Frozen target tests never enter fitting or adaptation. Local results remain pending until validated publication; retries do not create duplicates or mutate frozen versions.
+
+## Local session and client contract
+
+Electron launches, monitors and stops its bundled Python/SDK process automatically. The renderer loads bundled assets and uses a restricted local interface, not arbitrary process/filesystem access. User installation requires no Python, Docker or manually started local worker. Ship separate tested native OS/CPU installers and a reproducible general-training tool.
+
+Acquisition, calibration/adaptation and live/replay remain local. Prepared authorized sessions continue during cloud loss and synchronize later. First account access and uncached downloads require connectivity; offline authorization expiry/revocation policy must be designed. Device/input/processing failure and pause/stop produce neutral with a visible reason; failure requires explicit restart. Switching model versions occurs between sessions.
 
 ## Data ownership and migration
 
-One PostgreSQL instance may contain three schemas, but each service has its own login role with access only to its schema. Cross-service references are immutable external IDs, not cross-schema foreign keys. No service queries another service's schema. Operations spanning services use versioned API contracts and local transactions; no distributed transaction or 2PC is used. Administrative migrations are separate from application roles.
+Current PostgreSQL contains service-owned `data_protocol`, `ml_experiments` and `recognition` schemas with separate logins. Cross-service identifiers are external references, not cross-schema foreign keys. The historical `myoprosthesis` schema is a separate implementation and cannot be migrated by renaming schemas.
 
-The current `myoprosthesis` schema has cross-domain foreign keys and triggers. It cannot be split by renaming schemas alone. Before moving data:
+Before migration/publication changes, inventory ownership, back up and test on a copy; preserve IDs/checksums/provenance and compare counts/relationships. Frozen input membership and artifact bytes must match what the worker actually passes to fit. New migrations provide operator/client/session identity, model/run/package/evaluation registries and recording/desktop publication records. Their diagrams/dictionary and acceptance checks are in [database review](../database/README_TEACHER.md). Integrating these records into HTTP authorization, worker protocols and Electron synchronization remains application work.
 
-1. Inventory every table, trigger, foreign key, view and grant, and assign its owner. Keep the original database as a read-only migration source and take a verified backup.
-2. Create new service-owned schemas and migrations. Data & Protocol retains participant-role, overlapping-unit, freeze and calibration invariants within one transactional boundary.
-3. ML stores a snapshot of the frozen manifest ID, version, checksum, protocol and selected unit/segment IDs returned by Data & Protocol. It validates them before starting and checks that downloaded artifacts match their hashes. Snapshot immutability and API compatibility must be tested without cross-schema joins.
-4. Recognition stores the published model ID, artifact checksum, feature contract and local session state. It verifies the downloaded artifact and compatibility before a session starts. It does not query experiment tables.
-5. Backfill in dependency order, compare counts, IDs and checksums, exercise failure and recovery cases, then switch reads and writes service by service. Define rollback and reconciliation before any production migration. Do not alter existing research data until this procedure has been tested on a copy.
+Keep large artifacts in controlled storage and authoritative metadata/results in the owning cloud database. Define upload/verification/commit/reconciliation order and protect originals; cloud storage does not authorize unrestricted raw participant-data upload. Backup/retention and offline pending-data recovery are separate obligations.
 
-Ownership of canonical signals and split units remains in Data & Protocol so freeze and overlap checks remain atomic. ML must not treat a snapshot as proof of actual training inputs: the worker also validates the data it passes to fit. Immutable provenance snapshots and artifact hashes make later auditing possible when the source service is temporarily unavailable.
+## Current local deployment — development evidence
 
-## Contracts and failure behaviour
-
-Contracts use versioned JSON APIs and OpenAPI documents owned by each service. Large signal and model files are transferred as artifacts rather than embedded in JSON. The service that owns an artifact authorizes access and supplies its checksum; the consumer verifies downloaded bytes. Artifact transfer method, retention, access control and deployment topology are **TBD**.
-
-The first vertical slice is: create synthetic source records and labels → freeze a manifest → submit an experiment job referencing that manifest → inspect job status and a persisted result. The result must be computed from actual input; a mock model or a static response may only be used in clearly labelled test fixtures, never as the production API implementation. Later slices add calibration, recognition and real datasets.
-
-Each downstream call has an explicit timeout. Retry only operations that are safe or use operation-scoped idempotency keys; use a bounded retry count and backoff. Exhaustion returns a meaningful error and leaves a recoverable job state. An already running recognition session uses its verified local model and input; failure or invalid input causes neutral output with a visible reason. Service-specific endpoints provide liveness and readiness. Structured logs include a propagated correlation ID without signals, secrets or identifying information.
-
-The gateway must provide a single entry point, authentication/authorization and per-client rate limiting. Local-only development and external deployment have separate configurations. Production must be accessible to external users, with authenticated access and appropriately protected data. Hosting, identities, TLS termination, consent and permitted data storage are **TBD**.
-
-## Current local deployment
+The diagram below describes the existing single-host Compose. In particular its worker has local database access and its Recognition service is an HTTP replay service. These are current implementation facts, not the accepted cross-machine APIs or packaged desktop runtime. Existing Compose must be split before target deployment.
 
 ```mermaid
 flowchart TB
@@ -110,13 +98,12 @@ The service boundary does not permit a shared business-logic library. ML Experim
 
 ## Validation and implementation order
 
-1. Define source-owned contracts and schemas; implement a real synthetic import and split-freeze API with database integration tests and OpenAPI.
-2. Implement experiment submission and a worker that retrieves the frozen manifest from Data & Protocol, produces a real computed result and persists its provenance in its own schema. Add service contract tests and failure cases.
-3. Implement Recognition replay with a locally cached, verified model and independent feature extraction. Demonstrate ML service failure during active replay and neutral behaviour on input failure.
-4. Add gateway, service credentials, rate limits and independently built images. Run local integration and access-control tests with separate database roles.
-5. Add messaging, resilience, centralized observability and deployment automation; measure 80% coverage and test recovery, duplicate events and broken dependencies.
-6. Complete architecture and deployment diagrams against the deployed system, publish OpenAPI/AsyncAPI contracts, document service migration and verify requirements with evidence.
+1. Preserve existing synthetic regression/database tests and version the accepted contracts. Establish the source/channel/class protocol without silently changing the four-channel requirement.
+2. Verify direct SDK acquisition on the actual M1 Pro/macOS/device combination and complete local neutral/failure behaviour.
+3. Build Electron process lifecycle and reproducible native installers; verify clean-machine replay without developer tools.
+4. Implement/version adaptation packages and local LDA/SVM/MLP personalisation; measure package size, duration and memory. Keep target-only and frozen-test comparisons matched.
+5. Add cloud operator identities/authorization, remote-worker job/input/result APIs and permitted artifact publication. General fitting remains local.
+6. Implement prepared/offline client state and idempotent synchronization; verify expiry, duplicate retries, partial uploads and cloud loss during live.
+7. Reproduce full training outside the author's workstation, run real-data experiments, validate cloud adaptive UI/desktop layouts, measure timing/recovery and rehearse submission.
 
-This document is a target, not evidence that the rubric is satisfied. The existing synthetic rehearsal stores a placeholder model and unavailable metrics; it is not the real API flow described above.
-
-The newer service flow trains an actual source-only LDA on synthetic recordings and replays predictions. It remains a research prototype: target-only and personalised models, hardware acquisition, hand rendering, model caching, robust job recovery, authenticated inter-service calls, production deployment and independent experimental validation are not complete. The current service migrations and data must not be used for actual participant data until provenance, consent, access and retention rules are implemented and reviewed.
+The historical synthetic rehearsal contains a placeholder model and unavailable metrics. The newer service flow computes actual source-only LDA on synthetic data. Neither establishes real-data research validity. Electron, SDK live integration, full personalisation/target-only/SVM/MLP, operator identities, remote-worker APIs and synchronization remain incomplete. Existing replay caches, hand UI and job heartbeats are implemented in narrower development paths and must not be presented as the completed target.

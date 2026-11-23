@@ -1,5 +1,9 @@
 # Local observability
 
+## Accepted distributed monitoring scope
+
+[ADR-001](../docs/ARCHITECTURE_DECISIONS.md) separates cloud services, a local training workstation and Electron acquisition/adaptation/live. Cloud metrics must not be reported as local live latency. Correlate job/session/model IDs without exporting raw biosignals or secrets into logs; preserve actual measurement boundaries and environment. User desktop installation must not require this entire monitoring stack. The profile below is the existing single-host development implementation.
+
 The optional Compose `observability` profile starts Prometheus, Grafana, Alertmanager, Jaeger and Loki. Prometheus scrapes the four HTTP processes. The Grafana dashboard contains availability, experiment completion and recognition processing metrics. Recognition's p95 covers feature extraction and prediction only; it excludes window accumulation, transport and rendering.
 
 Before starting Compose, set the database, gateway and RabbitMQ environment variables described in the root README. To enable the observability profile, additionally set `GRAFANA_PASSWORD`, `OTEL_SDK_DISABLED=false` and `OTEL_LOGS_EXPORTER=otlp`, then run:

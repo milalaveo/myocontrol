@@ -1,6 +1,20 @@
 # Database implementation status
 
+## Accepted target versus existing schema
+
+The accepted [ADR-001](../docs/ARCHITECTURE_DECISIONS.md) now has additive persistence migrations: `identity/0001`, `data_protocol/0006`, `ml_experiments/0007` and `recognition/0003`. They add operator/client/session records, publication provenance/receipts, a generic run/model/package/evaluation registry and desktop reports. See the [teacher guide](README_TEACHER.md), [current logical diagrams](SERVICE_MODEL.md) and [generated service dictionary](SERVICE_DATA_DICTIONARY.md). HTTP identity, authenticated worker APIs and actual Electron synchronization remain application work; schema support does not establish a completed runtime.
+
 This document describes the original `myoprosthesis` backend and its limits. Statements about missing APIs or workers below refer to that implementation. The current service schemas, migration setup and relationships are described in the [database overview](README.md), [data dictionary](DATA_DICTIONARY.md) and [logical model](LOGICAL_MODEL.md). The database remains a research prototype; synthetic checks do not validate final research results or participant-data handling.
+
+## Additive service database acceptance — 23 November 2026
+
+- Four new migrations extend, rather than rewrite, the 13 previously applied service migrations; the migrator now records 17 checksummed revisions.
+- Identity, original-source recording metadata/client receipts, general model/adaptation-package registry, worker leases, mathematically checked evaluations and terminal desktop reports are implemented in SQL.
+- Verified locally on an isolated PostgreSQL 16.3: clean migration, repeat migration, upgrade preserving existing participant/queued LDA rows, generated-DDL restoration, 18 acceptance tests (including concurrent claims), and existing Data/ML/Recognition test suites.
+- CI now includes the same migrations/upgrade/acceptance/DDL checks on PostgreSQL 18. A CI configuration change is not a claim that the remote job has already passed.
+- [Teacher review procedure](README_TEACHER.md) gives a standalone PostgreSQL 18 setup and safe test commands. No application database was migrated during these local checks.
+
+The historical backend limitations below remain labelled as such. New registry metrics have arithmetic checks; byte authenticity, actual fit inputs, real-data identity resolution and cross-service authorization remain application responsibilities.
 
 ## Deployment and access
 
@@ -28,6 +42,8 @@ An artifact verification is an attestation inserted by a trusted service: Postgr
 
 Numbered SQL tests correspond to their migration revisions; Python concurrency tests require `TEST_DATABASE_URL` and leave synthetic rows in the disposable test database. Tests performed so far cover individual constraints, two split freeze/mutation orderings, one segment edit/selection ordering, publication and basic role permissions. They are not a complete acceptance suite.
 
-The PostgreSQL CI job has successfully exercised migrations, constraints, concurrency checks, API tests, schema isolation and generated DDL on a clean database. The dictionary now lists all 46 SQL-defined business tables across the original and service schemas; column-name coverage has been compared against the migration files. Migration bookkeeping is documented separately. The separate Compose smoke job still requires investigation.
+The PostgreSQL CI job has successfully exercised migrations, constraints, concurrency checks, API tests, schema isolation and generated DDL on a clean database. The baseline dictionary described 46 business tables. The additive migrations bring coverage to 59 across the 31-table historical schema and 28-table current service schemas. The generated service dictionary includes all current service columns/constraints/indexes. Migration bookkeeping is documented separately. The separate Compose smoke job still requires investigation.
 
 Still required for final research/production use: DB2 import identity and provenance validation; further protocol and gesture concurrency audits; complete calibrated input enforcement against actual model arrays; complete result and comparison compatibility; mathematical metric checks; further role hardening; artifact reconciliation; representative query plans; and participant-data retention procedures. These limitations must be distinguished from the narrower database submission checklist.
+
+The preceding paragraph describes the historical schema/research validation backlog. In the new service registry, complete confusion-count arithmetic and required package/class checks are implemented and tested. It still cannot prove correct ground-truth labels, actual fit arrays, file bytes, cross-service authorization or final statistical comparison rules; those require application/research evidence.

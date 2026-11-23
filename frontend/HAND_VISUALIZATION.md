@@ -1,5 +1,9 @@
 # Procedural hand visualization
 
+## Deployment context
+
+Under [ADR-001](../docs/ARCHITECTURE_DECISIONS.md), this reusable React/Three.js visualization belongs to the Electron local live/replay client. It receives commands from the bundled local Python runtime; cloud latency is outside that control path. This component is currently reusable browser code, not evidence of completed Electron packaging or live acquisition. Cloud results pages may reuse retrospective previews; a mobile live-control UI is not required.
+
 `src/components/HandScene.tsx` exports `HandScene` as its default export, accepting
 `{ gesture: string; playing?: boolean }`. Import it directly into the preview panel:
 

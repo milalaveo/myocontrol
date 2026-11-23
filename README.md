@@ -1,5 +1,11 @@
 # Simulated Myoelectric Prosthesis
 
+## Accepted deployment and delivery
+
+The accepted target has three boundaries: **cloud storage/research APIs and adaptive web UI**, **general training on a powerful local workstation**, and **Electron for local calibration/adaptation and live recognition**. Operator accounts, models and experiment results are centrally stored. The desktop bundles Python/PLUX SDK and manages local processes; the training worker is separately reproducible.
+
+See [accepted decisions](docs/ARCHITECTURE_DECISIONS.md), [deployment diagram](docs/DEPLOYMENT_ARCHITECTURE.md) and [design PRD](docs/DESIGN_PRD.md). Provider/sizing remain open. The Mac mini is an infrastructure option, not an architectural dependency. The commands below describe the existing single-host development environment; they do not deploy the complete accepted target.
+
 A research prototype for recognising hand gestures from surface electromyography (sEMG), studying calibration with limited labelled data, and controlling a simulated hand.
 
 ## Project structure
@@ -22,14 +28,14 @@ The following work remains **TBD**:
 
 - Import and validation of real recordings, including Ninapro DB2.
 - Validation of signal processing, model training and evaluation on measured data, plus personalised and target-only models.
-- Production deployment, calibration UI, live BITalino integration and research validation of the hand-control flow.
+- Cloud operator authorization/storage deployment, Electron packaging, local calibration/adaptation and live SDK integration, remote local-training worker contracts and synchronization.
 - Final experimental protocol, deployment configuration and data retention policy.
 
 Participant data, restricted datasets, credentials and generated artifacts must remain outside version control.
 
 ## Local services
 
-Database review materials: [setup and migration instructions](database/README.md), [data dictionary](database/DATA_DICTIONARY.md) and [logical model with ER diagrams](database/LOGICAL_MODEL.md). These documents distinguish the original schema from the schemas currently used by the local services.
+Database review starts with the [teacher README](database/README_TEACHER.md): isolated setup, migration/upgrade checks and acceptance tests. Also see [current ER diagrams](database/SERVICE_MODEL.md), [generated service dictionary](database/SERVICE_DATA_DICTIONARY.md), [service DDL](database/service_schema.sql), [setup instructions](database/README.md) and the [historical/combined model](database/LOGICAL_MODEL.md). These documents distinguish the original schema from the schemas currently used by the local services.
 
 Create a local `.env` file with the variables below before using Compose. Choose distinct passwords and do not commit this file. The database and RabbitMQ passwords initialize their respective volumes on first startup; changing the environment alone does not update an existing volume's credentials.
 

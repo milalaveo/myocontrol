@@ -1,10 +1,18 @@
 # Database Data Dictionary
 
+## Accepted target versus existing schema
+
+The accepted [ADR-001](../docs/ARCHITECTURE_DECISIONS.md) now has additive persistence migrations: `identity/0001`, `data_protocol/0006`, `ml_experiments/0007` and `recognition/0003`. They add operator/client/session records, publication provenance/receipts, a generic run/model/package/evaluation registry and desktop reports. See the [teacher guide](README_TEACHER.md), [current logical diagrams](SERVICE_MODEL.md) and [generated service dictionary](SERVICE_DATA_DICTIONARY.md). HTTP identity, authenticated worker APIs and actual Electron synchronization remain application work; schema support does not establish a completed runtime.
+
 This dictionary describes the tables and views created by the SQL migrations in this repository. It covers both the original `myoprosthesis` schema and the current service-owned schemas. PostgreSQL types are shown as declared in the migrations. Primary keys, foreign keys, unique constraints and important checks are listed where they define the data model.
 
 ## Which schema is used
 
-The local Docker Compose application currently migrates and uses `data_protocol`, `ml_experiments` and `recognition`. The original `myoprosthesis` schema belongs to the earlier single-application backend and is migrated separately with Alembic. The schemas are not yet a data migration path from one another. The Compose database also contains `public.service_schema_migrations`, which records service migration names and checksums.
+The Docker migrator installs `identity`, `data_protocol`, `ml_experiments` and `recognition`. Existing HTTP services use the earlier Data/ML/Recognition tables; the additive registry/identity tables are ready at the persistence layer but not yet wired into the new application contracts. The original `myoprosthesis` schema belongs to the earlier single-application backend and is migrated separately with Alembic. The schemas are not yet a data migration path from one another. The Compose database also contains `public.service_schema_migrations`, which records service migration names and checksums.
+
+## Current schema coverage
+
+The current service database has **28 business tables** across `identity`, `data_protocol`, `ml_experiments` and `recognition`. [SERVICE_DATA_DICTIONARY.md](SERVICE_DATA_DICTIONARY.md) contains every current service column, key, CHECK and index, generated from the migrated database. The tables below retain detailed descriptions of the compatible pre-registry path and the 31-table historical backend. They are not a claim that the new registry is used by existing HTTP endpoints.
 
 ## Service schemas
 

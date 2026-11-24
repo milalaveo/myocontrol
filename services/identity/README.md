@@ -1,6 +1,6 @@
 # Cloud Identity Persistence
 
-This directory contains the PostgreSQL migration for operator accounts, registered desktop/training clients and scoped access-session digests. It is a persistence boundary, not a fourth running HTTP service or a completed login system.
+This directory contains the PostgreSQL migration for operator accounts, registered desktop/training clients and scoped access-session digests. The [gateway identity adapter](../../gateway/README.md) implements login and client provisioning against this schema; identity is not a fourth independently running business service.
 
 The service migrator applies `migrations/0001_operators.sql` before the existing Data/ML/Recognition migrations. Application accounts are rows, not PostgreSQL users. Operator and participant identities remain separate.
 
@@ -10,6 +10,6 @@ The service migrator applies `migrations/0001_operators.sql` before the existing
 - Disabled operators and revoked clients/sessions are excluded from `valid_session_ids`; revoked clients/sessions cannot be reactivated.
 - The identity role cannot query other service schemas; reviewer views expose no identity credentials.
 
-`myocontrol_identity` is provisioned as a NOLOGIN group. The optional `IDENTITY_DB_PASSWORD` environment variable additionally provisions `identity_service_login` through the migrator when an application identity adapter is ready to use it. The current gateway still uses shared development Basic auth; setting this variable does not implement HTTP login/authorization or offline desktop grants.
+`myocontrol_identity` is provisioned as a NOLOGIN group. `IDENTITY_DB_PASSWORD` additionally provisions `identity_service_login` through the migrator for the gateway adapter. Configure it together with `CLOUD_INTERNAL_KEY` to enable the cloud portal. Legacy domain routes retain separate development Basic auth. Offline desktop grants and remote worker job/publication contracts remain outstanding.
 
 Review: [teacher guide](../../database/README_TEACHER.md), [dictionary](../../database/SERVICE_DATA_DICTIONARY.md), [logical schemas](../../database/SERVICE_MODEL.md).

@@ -28,7 +28,7 @@ The following work remains **TBD**:
 
 - Import and validation of real recordings, including Ninapro DB2.
 - Validation of signal processing, model training and evaluation on measured data, plus personalised and target-only models.
-- Cloud operator authorization/storage deployment, Electron packaging, local calibration/adaptation and live SDK integration, remote local-training worker contracts and synchronization.
+- Cloud deployment and further authorization of legacy domain routes, Electron packaging, local calibration/adaptation and live SDK integration, remote local-training worker contracts and synchronization.
 - Final experimental protocol, deployment configuration and data retention policy.
 
 Participant data, restricted datasets, credentials and generated artifacts must remain outside version control.
@@ -45,6 +45,8 @@ POSTGRES_PASSWORD=replace-with-a-unique-long-password
 DATA_DB_PASSWORD=replace-with-another-unique-long-password
 ML_DB_PASSWORD=replace-with-another-unique-long-password
 RECOGNITION_DB_PASSWORD=replace-with-another-unique-long-password
+IDENTITY_DB_PASSWORD=replace-with-another-unique-long-password
+CLOUD_INTERNAL_KEY=replace-with-a-random-secret-of-at-least-32-characters
 RABBITMQ_USER=myocontrol
 RABBITMQ_PASSWORD=replace-with-another-unique-long-password
 REDIS_PASSWORD=replace-with-another-unique-long-password
@@ -66,4 +68,4 @@ Run `docker compose --profile observability stop` to stop the local services wit
 
 ## Operator interface
 
-Start the React interface with `docker compose --profile ui up -d --build` and open **http://127.0.0.1:3000**. It provides an explicitly labelled interactive demo, EMG charts, five procedural hand poses, recording browsing, experiment submission and recorded prediction replay. Choose **Connect API** with the gateway credentials to load real data. See the [frontend guide](frontend/README.md) for development commands, libraries and current limitations.
+Start the React interface with `docker compose --profile ui up -d --build` and open **http://127.0.0.1:3000**. The cloud portal signs in individual operators and reads their experiments, published models and completed evaluations from the new registry. Create an account using the [gateway setup](gateway/README.md); the shared development gateway password is not a portal account. Interactive signal/hand components remain in source for Electron reuse. See the [frontend guide](frontend/README.md) for implemented flows and remaining scope.

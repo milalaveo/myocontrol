@@ -1,59 +1,66 @@
-﻿# Myocontrol operator interface
+# Cloud research frontend
 
-## Accepted client split — target, not implemented
+React + TypeScript + Vite portal for operator-owned experiment history, published models and evaluation results. The interface adapts to desktop, tablet and mobile widths. All UI text is English.
 
-The [accepted decision](../docs/ARCHITECTURE_DECISIONS.md) separates an **adaptive cloud research portal** from an **Electron local-control client**. Both can reuse React/Carbon components. Desktop Python/SDK lifecycle is managed by Electron; acquisition, calibration/adaptation, live recognition and replay execute locally. Cloud pages manage operators, protocols, model versions, jobs and results. Mobile/tablet acceptance applies only to the cloud portal.
+The cloud UI uses official `@carbon/react` components and `@carbon/icons-react`, with Carbon's White theme throughout. `src/styles.scss` uses Carbon spacing/type tokens for layout; forms, shell/navigation, buttons, tables, pagination, notifications and structured details use Carbon components. IBM Plex fonts are bundled locally by Vite. `src/local-preview/styles.css` is retained with the earlier local preview styling and is not loaded by the cloud entry point.
 
-The current directory still builds the browser prototype below. No Electron main/preload process, bundled native runtime or installers are implemented yet. Prepared desktop offline use and idempotent synchronization are target requirements, not existing browser behaviour.
+## Start
 
-React + TypeScript + Vite workspace for inspecting four-channel EMG, viewing a procedural hand, and using the existing local service APIs. All UI text is English.
-
-## Run with Docker
-
-Prepare the environment using the root README, then run from the repository root:
+Configure `IDENTITY_DB_PASSWORD` and `CLOUD_INTERNAL_KEY` in addition to the existing Compose variables. Create an operator as described in [gateway setup](../gateway/README.md), then run:
 
 ```powershell
 docker compose --profile ui up -d --build
 ```
 
-Open http://127.0.0.1:3000. The interactive demo works without signing in. Choose **Connect API** to use `GATEWAY_USERNAME` and `GATEWAY_PASSWORD` from your local `.env`. Passwords stay in React memory; they are not written to localStorage, sessionStorage, URLs or application logs. Reload/disconnect clears them. The UI and API proxy are loopback-only by default.
+Open http://127.0.0.1:3000 and sign in with the operator email/password. This account is separate from the development gateway Basic credentials. The password is cleared after successful login; the bearer token stays in React memory, never browser storage. Reload requires a new login; issued sessions expire after eight hours. Sign out revokes the current session on the server.
 
-## Develop locally
+For local development, run `npm ci` and `npm run dev` in this directory. Vite forwards `/api` to http://127.0.0.1:8000. The production nginx container provides the same proxy. `npm run preview` has no API proxy.
 
-Install Node.js 24 and start the backend Compose services. Then:
+## Implemented
+
+- Experiments: owner-filtered run history, execution location, status and reproducibility details.
+- Models: published versions, family/condition and package metadata.
+- Results: accuracy, macro F1, rest false activation (N/A remains N/A), raw evaluation detail including confusion counts.
+- Protected routes and direct record links, browser history, URL-based pagination, manual refresh, loading/error/empty states, centralized expired-session handling and cancellation of outdated requests.
+- Field-level sign-in validation, disabled duplicate submissions, cleared rejected passwords and global render recovery through ErrorBoundary.
+
+These screens read the new generic registry. Old synthetic `source_lda_runs` are not automatically migrated into it. An empty account has empty lists; the portal does not invent models or scientific results. General training remains on the local workstation. Submission/remote worker execution/publication and package downloads are still to be implemented, so no new training button is shown.
+
+## Local desktop scope
+
+Live recognition, acquisition, calibration/adaptation, hand control and replay belong to Electron. `src/local-preview/SignalChart.tsx`, `src/local-preview/HandScene.tsx`, their dependencies and shared types remain in source for reuse. The cloud entry point does not import them, generate demo signals or execute recognition. Electron itself has not been packaged yet.
+
+## Frontend assessment requirements
+
+| Requirement                                        | Evidence                                                                                              |
+| -------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| Modern SPA and bundler                             | React + TypeScript + Vite; `npm run build`.                                                           |
+| Architecture, user flows and stack justification   | [Frontend architecture](ARCHITECTURE.md), including diagrams, route mapping and technology decisions. |
+| Components, pages and API services                 | `src/components/`, `src/pages/`, `src/services/`; orchestration in hooks/context.                     |
+| Form validation, global error handling and loading | `LoginForm`, `services/http`, `ErrorBoundary`, `AuthContext` and `useRegistry`.                       |
+| Unit tests for at least three key components       | `LoginForm`, `RegistryTable`, `RegistryDetails` and `ErrorBoundary`; additional HTTP-client tests.    |
+| One or two e2e scenarios                           | Two Playwright scenarios, each run on desktop, tablet and mobile.                                     |
+
+## Verification
+
+`npm run build` checks TypeScript and produces assets; CI builds and audits the frontend. Gateway integration tests exercise actual PostgreSQL registry queries and account isolation. IBM Plex is served from the same application, with system fallbacks. Data/protocol management, experiment submission and further metric visualizations remain separate work.
+
+Run from `frontend/` using Node.js 24:
 
 ```powershell
-cd frontend
 npm ci
-npm run dev
+npm run format:check
+npm run test:unit
+npm run build
+npx playwright install chromium
+npm run test:e2e
 ```
 
-Open http://127.0.0.1:5173. Vite proxies `/api` to the gateway at http://127.0.0.1:8000. The production nginx container provides the same route. `npm run preview` only previews static assets and does not provide the development API proxy; use the Docker image to verify the complete production setup.
+There are 13 unit tests across four components and the HTTP client. The two e2e scenarios each run at 1440 px, 768 px and 390 px (six executions):
 
-## Available flows
+1. Invalid/valid login, paginated experiments, details and browser Back, model/results navigation, N/A metrics and logout.
+2. Protected deep-link restoration, API-error retry, empty registry, expired session and reauthentication.
 
-- Demo: illustrative four-channel signal, channel visibility, zoom, five manual hand poses, a scripted rest/fist sequence, playback pause/stop and signal JSON export. Demo waveforms are vertically offset and are explicitly labelled synthetic.
-- Recordings: connect, browse database records with participant filtering and pagination, and load a recording's actual four-channel signal. The API does not currently expose electrode/channel provenance or source units; the interface leaves them unspecified rather than inferring DB2 channel positions.
-- Experiments: submit a source-only LDA job with an existing frozen manifest and target participant UUID, inspect its status/results, or look up an existing run UUID. Polling is bounded to two minutes, with manual refresh afterwards.
-- Replay: use a successful model run and selected recording to compute real predictions through Recognition. Play back the saved window labels on the hand. Unknown poses render neutral. Pause/stop and failed operations return the hand to neutral. This is recorded playback, not live inference.
+Playwright starts the production preview server on port 4173 and intercepts `/api` with isolated synthetic fixtures; it does not require Docker or real credentials and does not write to the database. These are frontend browser tests with a controlled API boundary. Backend/database integration is verified separately by gateway tests. The normal Docker app uses the actual API; no fixture data are bundled into production.
 
-The signal chart shows the full loaded excerpt; the timeline controls hand prediction playback. Chart points are bounded to about 3000 through display-only sampling for larger inputs; source samples and JSON export remain unchanged. The hand is a conceptual illustration, not an anatomical or clinical model. Reported processing p95 excludes buffering and rendering.
-
-## Open-source libraries
-
-| Library | Purpose | License |
-| --- | --- | --- |
-| [React](https://github.com/facebook/react) | Interface | MIT |
-| [Vite](https://github.com/vitejs/vite) | Development and build | MIT |
-| [uPlot](https://github.com/leeoniya/uPlot) | Canvas time-series charts, approximately 50 KB minified library | MIT |
-| [Three.js](https://github.com/mrdoob/three.js) | WebGL hand geometry/rendering | MIT |
-| [React Three Fiber](https://github.com/pmndrs/react-three-fiber) | React integration for Three.js | MIT |
-| [Lucide](https://github.com/lucide-icons/lucide) | Icons | ISC |
-
-The 3D renderer is loaded as a separate chunk. There are no external hand assets, textures, physics or animation engines. See [hand visualization](HAND_VISUALIZATION.md). Fonts currently load from Google Fonts with system fallbacks; the interface remains usable when that request is unavailable.
-
-## Verification and remaining scope
-
-`npm run build` checks TypeScript and creates production assets. `npm audit` checks package advisories; `package-lock.json` records the resolved versions. CI builds and audits the UI. The Data service has a paginated `GET /v1/recordings` endpoint; it reads its own schema via SQLAlchemy.
-
-**TBD:** in-app dataset import, split/protocol editing, calibration workflows, live device acquisition, confusion-matrix visualization, durable run history browsing, production identities and end-to-end latency measurement. Actual DB2 channel selection is not determined by this interface. Real data require a compatible model; the five-excerpt ingestion pilot alone does not supply a trained model or frozen research split.
+`npm run format` applies the shared formatting rules. CI checks formatting, runs unit tests, builds, installs Chromium, runs all e2e viewport projects and audits dependencies. Failure reports/traces are uploaded as an Actions artifact. Local generated reports are ignored by Git.

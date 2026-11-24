@@ -34,6 +34,6 @@ Cloud does not execute general training. The local training workstation is not r
 
 ## Implementation and submission
 
-Current SQL/API documents describe existing behaviour, not completed target features. Operator/session persistence and model/package/run/evaluation registries now have migrations and acceptance tests. Application package generation/transfer, remote job/result APIs, Electron and synchronization still require implementation. Existing Compose commands remain development commands.
+Current SQL/API documents describe existing behaviour, not completed target features. Operator/session persistence and model/package/run/evaluation registries have migrations and acceptance tests. The gateway implements operator login, scoped client credentials/revocation and owner-filtered cloud registry reads; the browser exposes experiments/models/results. Application package generation/transfer, remote job/result APIs, Electron and synchronization still require implementation. Existing Compose commands remain development commands.
 
 Submission includes clean-machine desktop installation, permitted prepared replay, measured calibration/live behaviour and separately reproducible training tooling. Platform support is a tested OS/CPU/SDK matrix, not a guarantee supplied by Electron.

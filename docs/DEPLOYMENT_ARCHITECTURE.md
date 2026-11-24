@@ -72,7 +72,7 @@ The Mac mini is an infrastructure option, not a required logical node or an alre
 
 ## Current gaps
 
-The existing Compose is single-host development infrastructure. Electron packaging, direct SDK acquisition, local adaptation, HTTP operator authorization, authenticated remote-worker APIs and synchronization require implementation. Database support for accounts, registries, receipts and reports is implemented in the new migrations; see [teacher guide](../database/README_TEACHER.md). Architecture diagrams do not establish runtime performance or hardware compatibility.
+The existing Compose is single-host development infrastructure. The gateway now implements operator sessions, client provisioning/revocation and owner-scoped registry reads. Electron packaging, direct SDK acquisition, local adaptation, remote-worker job/publication APIs and synchronization require implementation. Database support for accounts, registries, receipts and reports is implemented in the new migrations; see [teacher guide](../database/README_TEACHER.md). Architecture diagrams do not establish runtime performance or hardware compatibility.
 
 ## Related documents
 

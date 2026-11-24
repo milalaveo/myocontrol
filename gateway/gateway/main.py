@@ -16,9 +16,15 @@ from fastapi.responses import JSONResponse, Response
 from fastapi.openapi.docs import get_swagger_ui_html
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from prometheus_client import Counter, Histogram, make_asgi_app
+from sqlalchemy.exc import SQLAlchemyError
+
+from .identity import router as identity_router
+from .cloud import router as cloud_router
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 app = FastAPI(title="Myocontrol Gateway", version="0.1.0")
+app.include_router(identity_router)
+app.include_router(cloud_router)
 app.mount("/metrics", make_asgi_app())
 REQUESTS = Counter("gateway_requests_total", "HTTP requests", ["method", "route", "status"])
 LATENCY = Histogram("gateway_request_seconds", "HTTP request duration", ["method", "route"])
@@ -28,6 +34,12 @@ logger.setLevel(logging.INFO)
 lock = threading.Lock()
 requests_by_client = {}
 SERVICES = {"data": "DATA_SERVICE_URL", "experiments": "ML_SERVICE_URL", "recognition": "RECOGNITION_SERVICE_URL"}
+
+
+@app.exception_handler(SQLAlchemyError)
+async def database_error(request: Request, error: SQLAlchemyError):
+    logger.error("identity_database_unavailable type=%s", type(error).__name__)
+    return JSONResponse(status_code=503, content={"detail": "Operator access unavailable"})
 
 
 @app.middleware("http")
@@ -46,6 +58,8 @@ async def correlation_id(request: Request, call_next):
         logger.exception("unhandled_error correlation_id=%s", correlation)
         response = JSONResponse(status_code=500, content={"detail": "Internal server error", "correlation_id": correlation})
     response.headers["X-Correlation-ID"] = correlation
+    if request.url.path.startswith(("/auth/", "/cloud/")):
+        response.headers["Cache-Control"] = "no-store"
     route = getattr(request.scope.get("route"), "path", "unmatched")
     elapsed = time.perf_counter() - started
     REQUESTS.labels(request.method, route, str(response.status_code)).inc()
@@ -110,6 +124,8 @@ def service_docs(service: str, username: str = Depends(authenticate)):
 
 @app.api_route("/{service}/{path:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE"])
 async def proxy(service: str, path: str, request: Request, username: str = Depends(authenticate)):
+    if path == "v1/registry" or path.startswith("v1/registry/"):
+        raise HTTPException(status_code=403, detail="Use operator-authenticated cloud routes")
     if service not in SERVICES or not (path.startswith("v1/") or path in {"health/live", "health/ready", "openapi.json"}) or ".." in path.split("/"):
         raise HTTPException(status_code=404, detail="Route not found")
     address = os.environ.get(SERVICES[service])

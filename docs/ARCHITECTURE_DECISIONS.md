@@ -73,9 +73,9 @@ Transfers use stable identities, checksums, idempotency and incomplete-transfer 
 
 ### Consequences and open details
 
-Accepted complexity includes installer maintenance, two UI surfaces, native SDK testing, local persistence, synchronization and remote-worker contracts. Provider, identity/session mechanism, offline policy, local transport, native build matrix, package format, data retention and source-pool distribution remain to be specified. Placement of general training, local adaptation and live execution is settled.
+Accepted complexity includes installer maintenance, two UI surfaces, native SDK testing, local persistence, synchronization and remote-worker contracts. Online identity now uses Argon2id passwords and opaque scoped sessions. Provider, offline policy, local transport, native build matrix, package format, data retention and source-pool distribution remain to be specified. Placement of general training, local adaptation and live execution is settled.
 
-Current code contains single-host development Compose, service APIs, synthetic source-only LDA and offline replay. Electron, local adaptation, direct SDK integration, remote-worker APIs and synchronization are not yet implemented. SQL migrations now model operators/clients/sessions, generic jobs/models/adaptation packages/evaluations, recording receipts/provenance and desktop reports. These are persistence capabilities, not a completed authentication/synchronization API. See [database acceptance](../database/README_TEACHER.md).
+Current code contains single-host development Compose, service APIs, synthetic source-only LDA and offline replay. The first cloud slice adds Argon2id operator login, expiring/revocable opaque bearer sessions, scoped client provisioning/revocation and owner-filtered registry reads. The browser now exposes experiments/models/results only. Legacy domain routes still require a separate development Basic credential and have not acquired per-operator authorization. Electron, local adaptation, direct SDK integration, remote-worker job/publication APIs and synchronization are not yet implemented. SQL migrations model the additional persistence capabilities. See [database acceptance](../database/README_TEACHER.md) and [cloud API setup](../gateway/README.md).
 
 ## Related documents
 

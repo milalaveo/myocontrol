@@ -37,3 +37,6 @@ data/backups/
 # Frontend dependencies and generated files
 node_modules/
 *.tsbuildinfo
+frontend/playwright-report/
+frontend/test-results/
+frontend/coverage/

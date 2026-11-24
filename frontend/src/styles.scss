@@ -1,0 +1,230 @@
+@use '@carbon/react';
+@use '@carbon/react/scss/spacing' as spacing;
+@use '@carbon/react/scss/type' as type;
+
+body {
+  margin: 0;
+  background: var(--cds-background);
+  color: var(--cds-text-primary);
+}
+
+.eyebrow {
+  @include type.type-style('label-01');
+  display: block;
+  margin-bottom: spacing.$spacing-05;
+  color: var(--cds-text-secondary);
+  letter-spacing: 0.08em;
+}
+
+.supporting-text {
+  @include type.type-style('body-01');
+  margin-top: spacing.$spacing-04;
+  color: var(--cds-text-secondary);
+  max-width: 42rem;
+}
+
+.login-page {
+  min-height: 100vh;
+  padding: spacing.$spacing-13 spacing.$spacing-09;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(20rem, 28rem);
+  align-items: center;
+  gap: spacing.$spacing-10;
+  max-width: 90rem;
+  margin: 0 auto;
+}
+
+.login-intro h1 {
+  @include type.type-style('heading-06');
+  max-width: 42rem;
+}
+
+.login-intro > p {
+  @include type.type-style('body-02');
+  max-width: 30rem;
+  color: var(--cds-text-secondary);
+  margin-top: spacing.$spacing-06;
+}
+
+.login-topics {
+  @include type.type-style('label-01');
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: spacing.$spacing-05;
+  margin-top: spacing.$spacing-09;
+  color: var(--cds-text-secondary);
+}
+
+.login-panel {
+  padding: spacing.$spacing-07;
+}
+
+.login-panel h2,
+.empty-state h2,
+.details-panel h2 {
+  @include type.type-style('heading-03');
+}
+
+.login-submit {
+  width: 100%;
+  max-width: none;
+}
+.account-bar {
+  align-items: center;
+}
+.operator-name {
+  @include type.type-style('body-compact-01');
+  padding-inline: spacing.$spacing-05;
+}
+
+.cloud-content {
+  min-height: calc(100vh - #{spacing.$spacing-09});
+  margin-block-start: spacing.$spacing-09;
+  padding: spacing.$spacing-07;
+}
+.workspace-content {
+  max-width: 100rem;
+  margin-inline: auto;
+}
+
+.page-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: spacing.$spacing-06;
+  padding-block: spacing.$spacing-09 spacing.$spacing-08;
+}
+
+.page-heading h1 {
+  @include type.type-style('heading-05');
+}
+.page-heading > .cds--btn {
+  flex-shrink: 0;
+}
+.page-notification {
+  margin-bottom: spacing.$spacing-06;
+  max-width: none;
+}
+
+.empty-state {
+  min-height: 22rem;
+  padding: spacing.$spacing-09;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: spacing.$spacing-05;
+}
+
+.empty-state > svg {
+  color: var(--cds-icon-secondary);
+  margin-bottom: spacing.$spacing-04;
+}
+.empty-state p {
+  @include type.type-style('body-01');
+  color: var(--cds-text-secondary);
+  max-width: 30rem;
+}
+.table-scroll {
+  overflow-x: auto;
+}
+.identifier {
+  @include type.type-style('code-01');
+}
+.details-section > .cds--btn {
+  margin-bottom: spacing.$spacing-05;
+}
+.details-panel {
+  padding: spacing.$spacing-07;
+}
+.details-panel > h2 {
+  margin-bottom: spacing.$spacing-06;
+}
+.details-panel .cds--snippet {
+  max-width: 100%;
+}
+.details-panel .cds--accordion {
+  margin-bottom: spacing.$spacing-07;
+}
+.detail-label {
+  min-width: 10rem;
+  width: 30%;
+  color: var(--cds-text-secondary);
+}
+.detail-value {
+  overflow-wrap: anywhere;
+}
+.fatal-error {
+  max-width: 42rem;
+  margin: spacing.$spacing-10 auto;
+  padding: spacing.$spacing-05;
+}
+.fatal-error h1 {
+  @include type.type-style('heading-04');
+}
+.fatal-error p {
+  margin-block: spacing.$spacing-06;
+}
+.page-heading h1:focus {
+  outline: none;
+}
+.table-scroll:focus-visible {
+  outline: 2px solid var(--cds-focus);
+  outline-offset: -2px;
+}
+
+@media (min-width: 66rem) {
+  .cloud-content {
+    margin-left: 16rem;
+  }
+}
+
+@media (max-width: 65.98rem) {
+  .login-page {
+    padding-inline: spacing.$spacing-07;
+    gap: spacing.$spacing-07;
+  }
+  .login-intro h1 {
+    @include type.type-style('heading-05');
+  }
+}
+
+@media (max-width: 41.98rem) {
+  .login-page {
+    grid-template-columns: 1fr;
+    padding: spacing.$spacing-09 spacing.$spacing-05 spacing.$spacing-07;
+    gap: spacing.$spacing-07;
+  }
+  .login-intro h1 {
+    @include type.type-style('heading-04');
+  }
+  .login-topics {
+    display: none;
+  }
+  .login-panel,
+  .details-panel {
+    padding: spacing.$spacing-05;
+  }
+  .cloud-content {
+    padding-inline: spacing.$spacing-05;
+  }
+  .operator-name {
+    display: none;
+  }
+  .page-heading {
+    align-items: flex-start;
+    padding-block: spacing.$spacing-07;
+    gap: spacing.$spacing-05;
+  }
+  .page-heading h1 {
+    @include type.type-style('heading-04');
+  }
+  .empty-state {
+    padding: spacing.$spacing-06;
+    min-height: 18rem;
+  }
+  .detail-label {
+    min-width: 7rem;
+  }
+}

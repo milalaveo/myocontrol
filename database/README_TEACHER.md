@@ -1,6 +1,6 @@
 # MyoControl Database — Teacher Review Guide
 
-This is the entry point for checking the **current service database**, including the cloud-storage/local-Electron architecture. The task being demonstrated is database design, migration, integrity, access isolation and persistence. Electron, HTTP operator authentication and real-data model training are separate application deliverables and are not claimed complete by these checks.
+This is the entry point for checking the **current service database**, including the cloud-storage/local-Electron architecture. The task being demonstrated is database design, migration, integrity, access isolation and persistence. HTTP operator authentication now has separate [gateway tests](../gateway/tests/test_cloud_access.py). Electron and real-data model training remain separate application deliverables and are not claimed complete by these database checks.
 
 ## 1. What is implemented
 
@@ -101,7 +101,7 @@ These views can be empty after rollback-based tests. They are live SQL projectio
 
 Within each service schema, PostgreSQL enforces declared FKs and constraints. UUID references to another service (operator, client, manifest, participant, subset, model or recording) are external references and must be validated/authorized through the owning API. Desktop users and remote workers do not receive PostgreSQL credentials.
 
-The schema provides account/session persistence; hashing parameters, token generation/validation, HTTP authorization and offline grants still require application code. The database stores artifact-verification attestations, not file bytes. It cannot prove what arrays were passed to model fit or that real gestures/labels are correct. The current synthetic ingestion/split path is not a complete real-data identity solution; legacy checksums are not silently rewritten to assert new provenance.
+The gateway implements Argon2id password verification, opaque token generation, hashed session storage, expiry/revocation checks and owner-scoped registry reads. Other domain routes retain development Basic authentication; worker publication, desktop synchronization and offline grants still require application code. The database stores artifact-verification attestations, not file bytes. It cannot prove what arrays were passed to model fit or that real gestures/labels are correct. The current synthetic ingestion/split path is not a complete real-data identity solution; legacy checksums are not silently rewritten to assert new provenance.
 
 ## 8. DDL snapshot and regression checks
 

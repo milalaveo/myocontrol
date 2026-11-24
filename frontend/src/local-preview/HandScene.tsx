@@ -178,7 +178,6 @@ function Hand({ gesture, playing, reducedMotion }: { gesture: Gesture; playing: 
   );
 }
 
-/** Procedural gesture preview; no downloaded models, textures, or controls. */
 export default function HandScene({ gesture, playing = false }: HandSceneProps) {
   const normalized = normalizeGesture(gesture);
   const label = LABELS[normalized];

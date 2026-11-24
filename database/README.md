@@ -4,13 +4,13 @@
 
 [ADR-001](../docs/ARCHITECTURE_DECISIONS.md) places operator accounts, published models, research metadata and experiment results in the cloud. Electron retains prepared packages and unpublished local work and synchronizes through APIs; external training workers also use APIs rather than database credentials. Large artifacts remain in controlled file/object storage.
 
-New migrations now implement operator/client/session persistence, recording publication receipts/provenance, generic model/run/package/evaluation records and terminal desktop reports. HTTP authentication, cross-service authorization and transfer/runtime integration still require application code. Start review with [README_TEACHER.md](README_TEACHER.md), [current diagrams](SERVICE_MODEL.md), [generated dictionary](SERVICE_DATA_DICTIONARY.md) and [service DDL](service_schema.sql).
+New migrations implement operator/client/session persistence, recording publication receipts/provenance, generic model/run/package/evaluation records and terminal desktop reports. The gateway now implements operator login, scoped/revocable client tokens and owner-filtered registry reads. Authorization of legacy domain routes and transfer/runtime integration remain outstanding. Start review with [README_TEACHER.md](README_TEACHER.md), [current diagrams](SERVICE_MODEL.md), [generated dictionary](SERVICE_DATA_DICTIONARY.md) and [service DDL](service_schema.sql).
 
 The project uses PostgreSQL 18, SQLAlchemy 2.0 and psycopg 3. The current Compose application uses `data_protocol`, `ml_experiments` and `recognition`. The earlier backend uses a separate `myoprosthesis` schema managed with Alembic. Compose does not migrate historical data between these implementations.
 
 ## New identity and registry layer
 
-`identity` has its own isolated NOLOGIN group and optional login provisioning via `IDENTITY_DB_PASSWORD`; normal existing Compose requires no new secret. Set a distinct environment password only when an identity adapter will consume that login. The current gateway remains shared development Basic auth.
+`identity` has its own isolated NOLOGIN group and login provisioning via `IDENTITY_DB_PASSWORD`. Configure a distinct password plus `CLOUD_INTERNAL_KEY` for the new gateway identity adapter; see [cloud setup](../gateway/README.md). Legacy Basic routes still work without those variables, while the cloud portal returns an explicit configuration error.
 
 The new generic ML registry coexists with `source_lda_runs`; no implicit backfill or model conversion is performed. Account IDs in another service schema are API-validated external UUIDs. The cloud/desktop/worker clients do not receive database credentials.
 

@@ -112,6 +112,7 @@ services:
     environment:
       <<: *tracing
       OTEL_SERVICE_NAME: ml-experiments
+      CLOUD_INTERNAL_KEY: ${CLOUD_INTERNAL_KEY:-}
       DB_HOST: database
       DB_NAME: ${POSTGRES_DB:-thesis}
       ML_DB_PASSWORD: ${ML_DB_PASSWORD:?Set ML_DB_PASSWORD}
@@ -206,6 +207,10 @@ services:
     environment:
       <<: *tracing
       OTEL_SERVICE_NAME: gateway
+      DB_HOST: database
+      DB_NAME: ${POSTGRES_DB:-thesis}
+      IDENTITY_DB_PASSWORD: ${IDENTITY_DB_PASSWORD:-}
+      CLOUD_INTERNAL_KEY: ${CLOUD_INTERNAL_KEY:-}
       GATEWAY_USERNAME: ${GATEWAY_USERNAME:?Set GATEWAY_USERNAME}
       GATEWAY_PASSWORD: ${GATEWAY_PASSWORD:?Set GATEWAY_PASSWORD}
       GATEWAY_REQUESTS_PER_MINUTE: ${GATEWAY_REQUESTS_PER_MINUTE:-60}
@@ -221,6 +226,8 @@ services:
       start_period: 10s
       retries: 30
     depends_on:
+      migrate:
+        condition: service_completed_successfully
       data-protocol:
         condition: service_healthy
       ml-experiments:

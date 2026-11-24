@@ -4,13 +4,13 @@
 
 Under [ADR-001](../docs/ARCHITECTURE_DECISIONS.md), this reusable React/Three.js visualization belongs to the Electron local live/replay client. It receives commands from the bundled local Python runtime; cloud latency is outside that control path. This component is currently reusable browser code, not evidence of completed Electron packaging or live acquisition. Cloud results pages may reuse retrospective previews; a mobile live-control UI is not required.
 
-`src/components/HandScene.tsx` exports `HandScene` as its default export, accepting
+`src/local-preview/HandScene.tsx` exports `HandScene` as its default export, accepting
 `{ gesture: string; playing?: boolean }`. Import it directly into the preview panel:
 
 ```tsx
-import HandScene from './components/HandScene';
+import HandScene from './local-preview/HandScene'
 
-<div style={{ height: 420 }}>
+;<div style={{ height: 420 }}>
   <HandScene gesture="finger_spread" playing={true} />
 </div>
 ```
@@ -22,13 +22,13 @@ request, or externally licensed model asset is needed.
 
 ## Gestures and playback
 
-| Gesture | Pose |
-| --- | --- |
-| `rest` or `neutral` | Relaxed fingers and straight wrist |
-| `fist` | All finger joints curl; the thumb folds across the palm |
-| `finger_spread` | Straight fingers fan outward and the thumb opens |
-| `wrist_flexion` | Hand bends forward at the wrist |
-| `wrist_extension` | Hand bends backward at the wrist |
+| Gesture             | Pose                                                    |
+| ------------------- | ------------------------------------------------------- |
+| `rest` or `neutral` | Relaxed fingers and straight wrist                      |
+| `fist`              | All finger joints curl; the thumb folds across the palm |
+| `finger_spread`     | Straight fingers fan outward and the thumb opens        |
+| `wrist_flexion`     | Hand bends forward at the wrist                         |
+| `wrist_extension`   | Hand bends backward at the wrist                        |
 
 Input is case insensitive; spaces and hyphens become underscores. Unrecognized
 values resolve to rest. `playing` defaults to `false`, which holds the selected
@@ -72,5 +72,5 @@ until mounting, so server rendering does not access `window`.
 - [Three.js MathUtils](https://threejs.org/docs/pages/MathUtils.html): `damp` for
   frame-rate-independent interpolation.
 
-Only this document and `src/components/HandScene.tsx` belong to this implementation.
+Only this document and `src/local-preview/HandScene.tsx` belong to this implementation.
 Package installation and integration are handled by the host application.

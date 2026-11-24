@@ -17,9 +17,11 @@ from sqlalchemy.orm import Session
 from .data_client import DataServiceError, source_signal
 from .db import get_session, session_factory
 from .models import SignalSummaryJob, SourceLdaRun
+from .registry import router as registry_router
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 app = FastAPI(title="ML Experiments API", version="0.1.0")
+app.include_router(registry_router)
 app.mount("/metrics", make_asgi_app())
 REQUESTS = Counter("ml_experiments_requests_total", "HTTP requests", ["method", "route", "status"])
 LATENCY = Histogram("ml_experiments_request_seconds", "HTTP request duration", ["method", "route"])

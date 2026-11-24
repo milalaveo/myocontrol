@@ -18,7 +18,17 @@ jobs:
           cache: npm
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci
+      - run: npm run format:check
+      - run: npm run test:unit
       - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: frontend-playwright-report
+          path: frontend/playwright-report/
+          retention-days: 7
       - run: npm audit --audit-level=high
 
   postgres:
@@ -161,6 +171,7 @@ jobs:
       - name: Enforce backend coverage
         shell: bash
         env:
+          CLOUD_TEST_DATABASE_URL: postgresql+psycopg://thesis_test:test-only@localhost:5432/myocontrol_review_ci
           DATA_DATABASE_URL: postgresql+psycopg://thesis_test:test-only@localhost:5432/thesis_data_service_test
           ML_DATABASE_URL: postgresql+psycopg://thesis_test:test-only@localhost:5432/thesis_ml_service_test
           RECOGNITION_DATABASE_URL: postgresql+psycopg://thesis_test:test-only@localhost:5432/thesis_recognition_service_test
@@ -168,6 +179,7 @@ jobs:
         run: |
           set -euo pipefail
           python -m pip install -r requirements-dev.txt
+          python -m pip install -r gateway/requirements.txt
           source_paths='backend/src/myoprosthesis,services/data_protocol/data_protocol,services/ml_experiments/ml_experiments,services/recognition/recognition,gateway/gateway'
           python -m coverage run --source="$source_paths" -m unittest discover -s backend/tests -p 'test_*.py'
           for test_dir in services/data_protocol/tests services/ml_experiments/tests services/recognition/tests gateway/tests; do

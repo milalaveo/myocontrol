@@ -1,11 +1,56 @@
-# API Gateway
+﻿# Cloud access and development gateway
 
-## Accepted cloud/client boundary
+The gateway owns HTTP access to the `identity` schema. Cloud clients never receive PostgreSQL credentials. General training executes on a local workstation; calibration/live recognition execute inside Electron.
 
-The [accepted deployment](../docs/ARCHITECTURE_DECISIONS.md) requires operator-account authorization for the cloud research portal and scoped API access for Electron and the local training worker. General training executes locally; interactive calibration/live never routes through the cloud gateway per window. Package download, job/progress/result publication and synchronization contracts require implementation.
+## Configure and create an operator
 
-The shared Basic-auth gateway documented below is development behaviour, not a completed operator identity/access system. Desktop clients/workers must not receive cloud PostgreSQL credentials.
+Add distinct random secrets to your untracked `.env`:
 
-The gateway routes `/data/v1/...`, `/experiments/v1/...` and `/recognition/v1/...` to the corresponding services. Interactive API documentation is available at `/data/docs`, `/experiments/docs` and `/recognition/docs`. The gateway requires HTTP Basic credentials from `GATEWAY_USERNAME` and `GATEWAY_PASSWORD`; service URLs come from `DATA_SERVICE_URL`, `ML_SERVICE_URL` and `RECOGNITION_SERVICE_URL`. The fixed-window rate limit defaults to 60 requests per minute per client IP, including unsuccessful authentication attempts, and can be set with `GATEWAY_REQUESTS_PER_MINUTE`. Health and metrics endpoints are exempt.
+```dotenv
+IDENTITY_DB_PASSWORD=replace-with-a-unique-long-password
+CLOUD_INTERNAL_KEY=replace-with-a-random-secret-of-at-least-32-characters
+```
 
-This first implementation is for local development only. HTTP Basic requires TLS for any remote deployment. Rate limits are process-local, are reset on restart and are not shared across gateway replicas. Upstream services must not be directly exposed to untrusted networks. Per-user authorization, managed identities, shared/distributed limits and centralized gateway logging are TBD.
+The migrator provisions `identity_service_login` with access to `identity` only. Gateway uses this login; ML uses its separate schema login. The internal key is shared only between gateway and ML, which must remain on a private service network. Keep HTTPS at the public cloud boundary. Do not send these secrets to browser, Electron or workers.
+
+```powershell
+docker compose up -d --build gateway ml-experiments
+docker compose exec gateway python -m gateway.identity operator@example.org "Operator name"
+```
+
+The CLI prompts twice for a password (12+ characters) and returns only the new operator UUID. Optional `--role reviewer` or `--role administrator` sets the account role. There is no public registration endpoint. No default operator/password is created. Role `reviewer` may read its own registry but cannot provision computing clients; cross-operator reviewer delegation is not implemented.
+
+## Public account API
+
+| Method | Route | Behaviour |
+| --- | --- | --- |
+| POST | `/auth/v1/sessions` | `{email,password}` → opaque bearer token, expiry and operator summary. |
+| GET | `/auth/v1/me` | Validate bearer session; return actor/scope/client/expiry. |
+| DELETE | `/auth/v1/sessions/current` | Revoke current session. |
+| POST | `/auth/v1/clients` | Web session provisions `{kind,name,platform}`; kind is `desktop` or `training_worker`. Returns scoped token once. |
+| GET | `/auth/v1/clients` | Web session lists own clients without credentials. |
+| DELETE | `/auth/v1/clients/{id}` | Web session revokes own client and invalidates its sessions. |
+
+Argon2id password hashes and SHA-256 digests of high-entropy session tokens are persisted; raw tokens are not. Web tokens last eight hours, client tokens thirty days. Every request checks expiry, operator state, session revocation and client state. Disabling an account or revoking a client invalidates existing access immediately. Tokens and authenticated responses are marked `Cache-Control: no-store`. Browser tokens stay in memory; desktop credential storage and offline grants are separate requirements.
+
+## Cloud registry API
+
+`GET /cloud/v1/{runs|models|results}` and `GET /cloud/v1/{runs|models|results}/{uuid}` require a bearer session. All roles/scopes currently read only their own operator's records. Lists accept `limit` (1–100, default 50) and `offset` (default 0), returning `{items,next_offset}`. Result detail includes confusion counts. Foreign IDs return 404. No lease digests or raw storage paths are exposed. Browser-supplied internal identity headers are ignored; the gateway supplies its validated context to ML.
+
+This is the first read-only cloud slice. Generic run submission, claim/heartbeat/result publication, verified package upload/download and desktop report/recording synchronization are not implemented yet. The existing synthetic LDA worker still processes its original development tables via direct DB access. It is not a remote workstation delivery mechanism.
+
+## Legacy development routes
+
+`/data/v1/...`, `/experiments/v1/...` and `/recognition/v1/...` retain separate HTTP Basic authentication using `GATEWAY_USERNAME` and `GATEWAY_PASSWORD`. These are development endpoints, without per-operator ownership checks, and must not be exposed as cloud tenant APIs. Their Swagger pages are `/data/docs`, `/experiments/docs`, `/recognition/docs`. Basic access cannot proxy the new ML registry. Gateway liveness/metrics remain available for infrastructure checks.
+
+The rate limit defaults to 60 requests/minute per IP, including failed authentication, and applies to both access surfaces. It is process-local and resets on restart. Only a proxy at `GATEWAY_TRUSTED_PROXY_IP` may supply `X-Real-IP`. Distributed limits, password recovery, token renewal, cross-operator sharing and production deployment are outstanding.
+
+## Verify
+
+After the [isolated database review](../database/README_TEACHER.md), set `CLOUD_TEST_DATABASE_URL` to the migrated `myocontrol_review_*` database (SQLAlchemy `postgresql+psycopg://` URL), include `gateway` and `services/ml_experiments` on `PYTHONPATH`, and run:
+
+```powershell
+python -m unittest discover -s gateway/tests -p 'test_*.py' -v
+```
+
+The cloud suite refuses other database names and seeds synthetic fixtures only. CI runs it during coverage checks against a disposable PostgreSQL 18 database. It covers login/revocation, scope restrictions, disabled/expired accounts, ownership filtering, pagination, published models, confusion counts and internal-header spoofing. Without `CLOUD_TEST_DATABASE_URL`, cloud DB tests are explicitly skipped while legacy gateway tests still run.

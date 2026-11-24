@@ -4,7 +4,7 @@ import time
 
 from .acquisition.bitalino_source import BitalinoSource
 from .calibration.selection import summarize
-from .recognition.classifier import Classifier
+from .recognition.selection import ModelSelection
 from .signals import DEFAULT_CHANNELS, read_signal, validate_samples
 from .storage.store import Store
 from .sync.client import CloudClient, CloudError
@@ -22,6 +22,7 @@ class Engine:
         self.pause_event = threading.Event()
         self.thread = None
         self.classifier = None
+        self.model_selection = ModelSelection(self.store.directory)
         self.state = {
             "state": "idle",
             "mode": None,
@@ -31,6 +32,19 @@ class Engine:
             "message": "Ready",
             "recognition": "No model selected",
         }
+
+        try:
+            self.classifier = self.model_selection.restore()
+            if self.classifier:
+                self.state["recognition"] = (
+                    "Experimental normalized DB2 model restored; BITalino accuracy is unvalidated"
+                    if self.classifier.experimental else
+                    "Saved model loaded; input compatibility is checked at session start"
+                )
+        except Exception:
+            self.state["recognition"] = (
+                "Saved model could not be loaded. Import it again or use Clear model."
+            )
 
     def status(self):
         with self.lock:
@@ -64,14 +78,26 @@ class Engine:
 
     def load_model(self, path):
         self.require_idle()
-        self.classifier = Classifier(path)
+        self.classifier = self.model_selection.import_model(path)
         self.publish(
-            recognition="Model loaded; input compatibility is checked at session start"
+            recognition=(
+                "Experimental normalized DB2 model loaded; BITalino accuracy is unvalidated"
+                if self.classifier.experimental else
+                "Model loaded; input compatibility is checked at session start"
+            )
         )
         return self.classifier.summary()
 
+    def train_personal_model(self, recording_ids):
+        self.require_idle()
+        from .calibration.training import train_personal
+        path, assessment = train_personal(self.store, recording_ids)
+        self.load_model(path)
+        return {"model": self.classifier.summary(), "assessment": assessment}
+
     def clear_model(self):
         self.require_idle()
+        self.model_selection.clear()
         self.classifier = None
         return self.publish(command="neutral", recognition="No model selected")
 
@@ -79,6 +105,10 @@ class Engine:
         if self.classifier:
             try:
                 self.classifier.prepare(metadata)
+                if self.classifier.experimental:
+                    return True, (
+                        "Experimental normalized DB2 model; BITalino accuracy is unvalidated"
+                    )
                 return True, "Compatible feature contract"
             except ValueError as error:
                 return False, str(error)

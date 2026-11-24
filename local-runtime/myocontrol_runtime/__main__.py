@@ -37,6 +37,7 @@ def main():
             "export_recording": engine.store.export,
             "load_model": engine.load_model,
             "clear_model": engine.clear_model,
+            "train_personal_model": engine.train_personal_model,
             "cloud_login": engine.cloud_login,
             "cloud_logout": engine.cloud_logout,
             "cloud_restore": lambda credentials: engine.sync.configure(credentials),

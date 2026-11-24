@@ -7,6 +7,7 @@ from unittest.mock import patch
 
 from myocontrol_runtime.acquisition.bitalino_source import BitalinoSource
 from myocontrol_runtime.engine import Engine
+from myocontrol_runtime.processing.features import extract_features, NORMALIZED_PREPROCESSING
 from myocontrol_runtime.recognition.classifier import Classifier
 from myocontrol_runtime.signals import read_signal, validate_samples
 from myocontrol_runtime.storage.store import Store
@@ -92,11 +93,11 @@ class RuntimeTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             read_signal(path)
 
-    def model(self):
+    def model(self, channels=4):
         path = self.directory / "lda.json"
         config = {
-            "version": "time-domain-4ch-v1",
-            "channels": 4,
+            "version": f"time-domain-{channels}ch-v1",
+            "channels": channels,
             "order": "channel-major",
             "features": [
                 "mav",
@@ -117,13 +118,89 @@ class RuntimeTests(unittest.TestCase):
                 {
                     "family": "lda",
                     "classes": ["fist", "rest"],
-                    "coefficients": [[0] * 20],
+                    "coefficients": [[0] * (channels * 5)],
                     "intercepts": [1],
                     "feature_config": config,
                 }
             )
         )
         return path
+
+    def test_selected_model_survives_restart_without_original_file(self):
+        path = self.model()
+        engine = Engine(self.directory, lambda *_: None)
+        try:
+            selected = engine.load_model(path)
+        finally:
+            engine.close()
+        path.unlink()
+        restored = Engine(self.directory, lambda *_: None)
+        try:
+            self.assertEqual(restored.status()["model"], selected)
+            self.assertIn("Saved model loaded", restored.status()["recognition"])
+            restored.classifier.prepare(META)
+            self.assertEqual(
+                restored.classifier.feed([[0] * 4] * 200)[0]["command"], "neutral"
+            )
+        finally:
+            restored.close()
+
+    def test_clear_model_persists_across_restart(self):
+        engine = Engine(self.directory, lambda *_: None)
+        try:
+            engine.load_model(self.model())
+            engine.clear_model()
+            self.assertIsNone(engine.status()["model"])
+            self.assertFalse(engine.model_selection.path.exists())
+        finally:
+            engine.close()
+        restored = Engine(self.directory, lambda *_: None)
+        try:
+            self.assertIsNone(restored.status()["model"])
+        finally:
+            restored.close()
+
+    def test_invalid_import_keeps_previous_saved_and_active_model(self):
+        engine = Engine(self.directory, lambda *_: None)
+        try:
+            selected = engine.load_model(self.model())
+            invalid = self.directory / "invalid.json"
+            invalid.write_text("{}", encoding="utf-8")
+            with self.assertRaises(ValueError):
+                engine.load_model(invalid)
+            self.assertEqual(engine.status()["model"], selected)
+            self.assertEqual(engine.model_selection.restore().summary(), selected)
+        finally:
+            engine.close()
+
+    def test_failed_model_write_keeps_previous_selection(self):
+        engine = Engine(self.directory, lambda *_: None)
+        try:
+            selected = engine.load_model(self.model())
+            previous = engine.model_selection.path.read_bytes()
+            with patch(
+                "myocontrol_runtime.recognition.selection.os.replace",
+                side_effect=OSError("disk unavailable"),
+            ):
+                with self.assertRaises(OSError):
+                    engine.load_model(self.model())
+            self.assertEqual(engine.status()["model"], selected)
+            self.assertEqual(engine.model_selection.path.read_bytes(), previous)
+            self.assertEqual(list(self.directory.glob(".model-*")), [])
+        finally:
+            engine.close()
+
+    def test_corrupt_saved_model_does_not_block_startup_and_can_be_cleared(self):
+        saved = self.directory / "selected-model.json"
+        saved.write_text("broken JSON", encoding="utf-8")
+        engine = Engine(self.directory, lambda *_: None)
+        try:
+            self.assertIsNone(engine.status()["model"])
+            self.assertIn("could not be loaded", engine.status()["recognition"])
+            engine.clear_model()
+            self.assertFalse(saved.exists())
+        finally:
+            engine.close()
 
     def test_classifier_windowing_and_device_contract_gate(self):
         classifier = Classifier(self.model())
@@ -135,6 +212,127 @@ class RuntimeTests(unittest.TestCase):
             classifier.prepare({**META, "source_kind": "device"})
         with self.assertRaises(ValueError):
             classifier.prepare({**META, "channel_map": [0, 1]})
+
+    def test_two_channel_features_preserve_channel_major_order(self):
+        import numpy as np
+
+        samples = [[1, 2], [-2, 2], [3, 2]]
+        actual = extract_features(samples, channels=2)
+        np.testing.assert_allclose(actual, [2, np.sqrt(14 / 3), 8, 2, 1, 2, 2, 0, 0, 0])
+        four_channel = [row + [0, 0] for row in samples]
+        np.testing.assert_array_equal(actual, extract_features(four_channel)[:10])
+        with self.assertRaises(ValueError):
+            extract_features(four_channel, channels=2)
+
+    def test_two_channel_inference_mapping_and_saved_model(self):
+        path = self.model(channels=2)
+        body = json.loads(path.read_text(encoding="utf-8"))
+        body["feature_config"].update(channel_map=[0, 1], units="adc_counts")
+        body["coefficients"] = [[1] + [0] * 9]
+        body["intercepts"] = [-1]
+        path.write_text(json.dumps(body), encoding="utf-8")
+        metadata = {**META, "channel_map": [0, 1], "source_kind": "device", "units": "adc_counts"}
+        engine = Engine(self.directory, lambda *_: None)
+        try:
+            engine.load_model(path)
+        finally:
+            engine.close()
+        path.unlink()
+        restored = Engine(self.directory, lambda *_: None)
+        try:
+            model = restored.classifier
+            self.assertEqual(model.summary()["channels"], 2)
+            model.prepare(metadata)
+            self.assertEqual(model.feed([[2, 0]] * 200)[0]["gesture"], "rest")
+            model.prepare(metadata)
+            self.assertEqual(model.feed([[0, 0]] * 200)[0]["gesture"], "fist")
+            for mismatch in (
+                {**metadata, "channel_map": [1, 0]},
+                {**metadata, "channel_map": [2, 3]},
+                {**metadata, "units": "mV"},
+                {**metadata, "sample_rate_hz": 100},
+                {**metadata, "channel_map": [0, 1, 2, 3]},
+            ):
+                with self.assertRaises(ValueError):
+                    model.prepare(mismatch)
+            restored.clear_model()
+            self.assertIsNone(restored.model_selection.restore())
+        finally:
+            restored.close()
+
+    def test_model_contract_does_not_allow_relabelling_four_as_two_channels(self):
+        path = self.model()
+        original = json.loads(path.read_text(encoding="utf-8"))
+        original["feature_config"]["channels"] = 2
+        path.write_text(json.dumps(original), encoding="utf-8")
+        with self.assertRaisesRegex(ValueError, "feature contract"):
+            Classifier(path)
+        original["feature_config"]["version"] = "time-domain-2ch-v1"
+        path.write_text(json.dumps(original), encoding="utf-8")
+        with self.assertRaisesRegex(ValueError, "10 features"):
+            Classifier(path)
+
+    def test_invalid_model_channel_mapping_is_rejected(self):
+        path = self.model(channels=2)
+        body = json.loads(path.read_text(encoding="utf-8"))
+        for mapping in ([0, 0], [0], [0, 6], [True, 1]):
+            body["feature_config"]["channel_map"] = mapping
+            path.write_text(json.dumps(body), encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "channel mapping"):
+                Classifier(path)
+
+    def test_normalized_features_remove_dc_and_common_scale_not_channel_ratio(self):
+        import numpy as np
+
+        samples = np.array([[1, 2], [-2, -4], [3, 6], [-1, -2]], dtype=float)
+        options = {"channels": 2, "preprocessing": NORMALIZED_PREPROCESSING}
+        features = extract_features(samples, **options)
+        shifted_scaled = extract_features(samples * 200 + [514, 508], **options)
+        np.testing.assert_allclose(features, shifted_scaled, rtol=1e-12, atol=1e-12)
+        self.assertAlmostEqual(features[6] / features[1], 2)
+        np.testing.assert_array_equal(extract_features([[514, 508]] * 200, **options), [0] * 10)
+        with self.assertRaises(ValueError):
+            extract_features(samples, channels=2, preprocessing="unknown")
+
+    def test_experimental_model_uses_declared_input_units_and_warning(self):
+        path = self.model(channels=2)
+        body = json.loads(path.read_text(encoding="utf-8"))
+        body["experimental"] = True
+        body["feature_config"].update(
+            version="time-domain-2ch-dc-common-rms-v1",
+            preprocessing=NORMALIZED_PREPROCESSING,
+            normalization_floor=1e-12,
+            channel_map=[0, 1],
+            units="window-normalized",
+            input_units=["ADC counts", "dataset-native"],
+        )
+        path.write_text(json.dumps(body), encoding="utf-8")
+        engine = Engine(self.directory, lambda *_: None)
+        metadata = {**META, "channel_map": [0, 1], "source_kind": "device", "units": "ADC counts"}
+        try:
+            engine.load_model(path)
+            self.assertIn("unvalidated", engine.status()["recognition"])
+            enabled, message = engine.prepare_recognition(metadata)
+            self.assertTrue(enabled)
+            self.assertIn("Experimental", message)
+            self.assertTrue(engine.classifier.summary()["experimental"])
+            self.assertEqual(engine.classifier.feed([[514, 508]] * 200)[0]["command"], "neutral")
+            engine.classifier.prepare({**metadata, "source_kind": "dataset", "units": "dataset-native"})
+            with self.assertRaises(ValueError):
+                engine.classifier.prepare({**metadata, "units": "mV"})
+            with self.assertRaises(ValueError):
+                engine.classifier.prepare({**metadata, "units": "dataset-native"})
+        finally:
+            engine.close()
+        restored = Engine(self.directory, lambda *_: None)
+        try:
+            self.assertIn("unvalidated", restored.status()["recognition"])
+        finally:
+            restored.close()
+        body["experimental"] = False
+        path.write_text(json.dumps(body), encoding="utf-8")
+        with self.assertRaisesRegex(ValueError, "experimental"):
+            Classifier(path)
 
     def test_low_rate_model_rejected_without_zero_step_loop(self):
         path = self.model()

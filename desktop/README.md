@@ -12,6 +12,8 @@ npm run setup:runtime
 npm run dev
 ```
 
+`npm run dev` runs Vite HMR for React/CSS and watches Electron main/preload and Python source. Successful main/preload builds and Python changes restart Electron only after capture/replay is idle; paused work also defers restart. TypeScript errors keep the last working process alive. Close the application to stop the dev server and compiler. Development uses a separate `MyoControl Development` profile unless `MYOCONTROL_PROFILE` is explicitly supplied. No installer is needed for this development loop.
+
 Or build with `npm run build`, then `npm start`. Development Python is in `local-runtime/.venv`. `MYOCONTROL_BOOTSTRAP_PYTHON` selects the interpreter used to create it; `MYOCONTROL_PYTHON` overrides the development runtime executable. Packaged builds always use the bundled executable.
 
 ## User flow

@@ -7,7 +7,7 @@
   "author": "MyoControl",
   "main": "dist-electron/main.js",
   "scripts": {
-    "dev": "npm run build:main && node scripts/dev.mjs",
+    "dev": "node scripts/dev.mjs",
     "build:main": "tsc -p tsconfig.electron.json",
     "build": "tsc --noEmit -p tsconfig.json && npm run build:main && vite build",
     "setup:runtime": "node scripts/setup-runtime.mjs",

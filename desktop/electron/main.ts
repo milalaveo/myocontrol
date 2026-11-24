@@ -12,8 +12,12 @@ import {
 } from './credentials.js'
 
 const directory = path.dirname(fileURLToPath(import.meta.url))
-if (!app.isPackaged && process.env.MYOCONTROL_PROFILE)
-  app.setPath('userData', path.resolve(process.env.MYOCONTROL_PROFILE))
+if (!app.isPackaged) {
+  if (process.env.MYOCONTROL_PROFILE)
+    app.setPath('userData', path.resolve(process.env.MYOCONTROL_PROFILE))
+  else if (process.env.MYOCONTROL_DEV === '1')
+    app.setPath('userData', path.join(app.getPath('appData'), 'MyoControl Development'))
+}
 const single = app.requestSingleInstanceLock()
 if (!single) app.quit()
 
@@ -21,8 +25,39 @@ const runtime = new RuntimeManager()
 let window: BrowserWindow | null = null
 let credentials: Credentials | null = null
 let quitting = false
-
+let devRestartPending = false
+let devRestartChecking = false
+function restartDevelopmentWhenIdle() {
+  if (!devRestartPending || devRestartChecking || quitting) return
+  devRestartChecking = true
+  void runtime
+    .call('status')
+    .then((value) => {
+      if (['idle', 'failed'].includes((value as { state: string }).state)) {
+        devRestartPending = false
+        process.send?.({ type: 'myocontrol:dev-restarting' })
+        app.quit()
+      } else {
+        process.send?.({ type: 'myocontrol:dev-deferred' })
+      }
+    })
+    .catch(() => {})
+    .finally(() => {
+      devRestartChecking = false
+    })
+}
+if (!app.isPackaged && process.env.MYOCONTROL_DEV === '1' && process.send) {
+  process.on('message', (message) => {
+    if (!message || typeof message !== 'object' || !('type' in message)) return
+    if (message.type === 'myocontrol:dev-restart') {
+      devRestartPending = true
+      restartDevelopmentWhenIdle()
+    } else if (message.type === 'myocontrol:dev-stop') app.quit()
+  })
+  process.on('disconnect', () => app.quit())
+}
 runtime.on('runtime-event', (event) => {
+  if (event.event === 'status') restartDevelopmentWhenIdle()
   if (event.event === 'cloud' && event.data.state === 'auth_required') {
     credentials = null
     void clearCredentials().catch(() => {})
@@ -50,10 +85,10 @@ const commands = new Set([
   'resume',
   'clear_model',
   'train_personal_model',
-  'scan_sensors',
   'sync_status',
   'queue_upload',
   'retry_sync',
+  'scan_sensors',
 ])
 
 ipcMain.handle('runtime:request', async (event, method: unknown, params: unknown) => {
@@ -184,6 +219,7 @@ async function launch() {
   credentials = await readCredentials()
   try {
     await runtime.start()
+    restartDevelopmentWhenIdle()
     if (credentials) await runtime.call('cloud_restore', { credentials })
   } catch {
     credentials = null
@@ -191,6 +227,12 @@ async function launch() {
   if (!app.isPackaged && process.env.MYOCONTROL_DEV === '1')
     await window.loadURL('http://127.0.0.1:5174')
   else await window.loadFile(path.join(directory, '../dist/index.html'))
+  if (process.env.MYOCONTROL_E2E !== '1') {
+    window.show()
+    window.focus()
+  }
+  if (!app.isPackaged && process.env.MYOCONTROL_DEV === '1')
+    process.send?.({ type: 'myocontrol:dev-ready', visible: window.isVisible() })
   window.on('closed', () => {
     window = null
     app.quit()

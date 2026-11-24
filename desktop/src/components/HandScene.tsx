@@ -52,7 +52,7 @@ function Fallback({ label }: { label: string }) {
       style={{
         display: 'grid',
         placeContent: 'center',
-        minHeight: 320,
+        minHeight: '100%',
         height: '100%',
         textAlign: 'center',
         color: '#b9d4ef',
@@ -250,13 +250,13 @@ export default function HandScene({ gesture, playing = false }: HandSceneProps) 
   }, [])
 
   return (
-    <div style={{ position: 'relative', width: '100%', height: '100%', minHeight: 320 }}>
+    <div className="hand-preview">
       <span role="status" aria-live="polite" style={hiddenText}>
         {label}.{' '}
         {playing && !reducedMotion ? 'Gesture demonstration playing.' : 'Static gesture preview.'}
       </span>
       {!ready ? (
-        <div style={{ minHeight: 320 }} aria-hidden="true" />
+        <div style={{ height: '100%' }} aria-hidden="true" />
       ) : contextLost ? (
         <Fallback label={label} />
       ) : (
@@ -264,10 +264,10 @@ export default function HandScene({ gesture, playing = false }: HandSceneProps) 
           <Canvas
             aria-label={`3D hand showing ${label.toLowerCase()}`}
             role="img"
-            camera={{ position: [0, 0.25, 6.7], fov: 39, near: 0.1, far: 30 }}
+            camera={{ position: [0, 0.25, 8], fov: 39, near: 0.1, far: 30 }}
             dpr={[1, 1.5]}
             gl={{ alpha: true, antialias: true, powerPreference: 'low-power' }}
-            style={{ background: 'transparent', minHeight: 320 }}
+            style={{ background: 'transparent' }}
             fallback={<Fallback label={label} />}
             onCreated={({ gl }) => gl.setClearColor('#071526', 0)}
           >

@@ -12,7 +12,7 @@ import {
   SideNavLink,
   SkipToContent,
 } from '@carbon/react'
-import { Logout } from '@carbon/icons-react'
+import { DataBase, Logout } from '@carbon/icons-react'
 import { collectionKeys, collections } from '../config/collections'
 import { useAuth } from '../context/AuthContext'
 import { errorMessage } from '../services/http'
@@ -68,6 +68,16 @@ export default function WorkspaceLayout() {
           onSideNavBlur={() => setNavOpen(false)}
         >
           <SideNavItems>
+            <SideNavLink
+              as={Link}
+              to="/recordings"
+              large
+              renderIcon={DataBase}
+              isActive={location.pathname.startsWith('/recordings')}
+              onClick={() => setNavOpen(false)}
+            >
+              Recordings
+            </SideNavLink>
             {collectionKeys.map((key) => {
               const item = collections[key]
               return (

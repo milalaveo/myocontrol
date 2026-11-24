@@ -1,7 +1,9 @@
-import { createContext, useCallback, useContext, useMemo, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
-import { createSession, revokeSession } from '../services/auth'
-import { ApiError } from '../services/http'
+import { Button, InlineLoading } from '@carbon/react'
+import { createSession, currentSession, revokeSession } from '../services/auth'
+import { ApiError, errorMessage } from '../services/http'
+import ErrorNotice from '../components/ErrorNotice'
 import type { AccessSession, Credentials } from '../types/cloud'
 
 interface AuthContextValue {
@@ -9,7 +11,7 @@ interface AuthContextValue {
   notice: string
   signIn: (credentials: Credentials) => Promise<void>
   signOut: () => Promise<void>
-  expireSession: (token: string) => void
+  expireSession: () => void
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
@@ -17,6 +19,28 @@ const AuthContext = createContext<AuthContextValue | null>(null)
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<AccessSession | null>(null)
   const [notice, setNotice] = useState('')
+  const [restoring, setRestoring] = useState(true)
+  const [restoreError, setRestoreError] = useState('')
+  const [attempt, setAttempt] = useState(0)
+
+  useEffect(() => {
+    const controller = new AbortController()
+    setRestoring(true)
+    setRestoreError('')
+    currentSession(controller.signal)
+      .then((next) => {
+        if (!controller.signal.aborted) setSession(next)
+      })
+      .catch((error) => {
+        if (controller.signal.aborted) return
+        if (error instanceof ApiError && error.status === 401) setSession(null)
+        else setRestoreError(errorMessage(error))
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setRestoring(false)
+      })
+    return () => controller.abort()
+  }, [attempt])
 
   const signIn = useCallback(async (credentials: Credentials) => {
     const next = await createSession(credentials)
@@ -24,15 +48,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setSession(next)
   }, [])
 
-  const expireSession = useCallback((token: string) => {
-    setSession((current) => (current?.access_token === token ? null : current))
+  const expireSession = useCallback(() => {
+    setSession(null)
     setNotice('Your session has expired or been revoked. Please sign in again.')
   }, [])
 
   const signOut = useCallback(async () => {
     if (!session) return
     try {
-      await revokeSession(session.access_token)
+      await revokeSession()
     } catch (error) {
       if (!(error instanceof ApiError && error.status === 401)) throw error
     }
@@ -44,7 +68,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     () => ({ session, notice, signIn, signOut, expireSession }),
     [session, notice, signIn, signOut, expireSession],
   )
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
+  return (
+    <AuthContext.Provider value={value}>
+      {restoring ? (
+        <main className="session-check">
+          <InlineLoading description="Restoring your session…" />
+        </main>
+      ) : restoreError ? (
+        <main className="session-check">
+          <ErrorNotice title="Could not restore your session" message={restoreError} />
+          <Button onClick={() => setAttempt((value) => value + 1)}>Try again</Button>
+        </main>
+      ) : (
+        children
+      )}
+    </AuthContext.Provider>
+  )
 }
 
 export function useAuth() {

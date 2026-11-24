@@ -208,6 +208,7 @@ services:
     environment:
       <<: *tracing
       OTEL_SERVICE_NAME: gateway
+      WEB_SESSION_SECURE: ${WEB_SESSION_SECURE:-false}
       DB_HOST: database
       DB_NAME: ${POSTGRES_DB:-thesis}
       IDENTITY_DB_PASSWORD: ${IDENTITY_DB_PASSWORD:-}

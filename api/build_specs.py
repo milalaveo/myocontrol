@@ -126,6 +126,26 @@ def decorate(name, spec):
                     raise ValueError(f"Undocumented operation: {name} {key}")
                 summary, description, errors = CATALOG[name][key]
             operation["summary"], operation["description"] = summary, description
+            if name == "gateway" and (
+                key == "POST /auth/v1/sessions"
+                or (
+                    method in {"post", "put", "patch", "delete"}
+                    and any(
+                        "WebSession" in security
+                        for security in operation.get("security", [])
+                    )
+                )
+            ):
+                operation.setdefault("parameters", []).append(
+                    {
+                        "name": "X-MyoControl-Web",
+                        "in": "header",
+                        "required": False,
+                        "description": "Required for browser sign-in carrying Origin and for cookie-authenticated mutations. Optional for bearer API clients. The SPA sends this automatically.",
+                        "schema": {"type": "string", "enum": ["1"], "default": "1"},
+                        "example": "1",
+                    }
+                )
             operation["tags"] = (
                 ["health"]
                 if path.startswith("/health/")
@@ -151,6 +171,20 @@ def decorate(name, spec):
                     operation["responses"][str(status)] = error_response(
                         status, message
                     )
+            if (
+                name == "gateway"
+                and method in {"post", "put", "patch", "delete"}
+                and any(
+                    "WebSession" in security
+                    for security in operation.get("security", [])
+                )
+            ):
+                operation["responses"].setdefault(
+                    "403", error_response(403, "Browser request header required")
+                )
+                operation[
+                    "description"
+                ] += " Cookie-authenticated mutations additionally require X-MyoControl-Web: 1. Bearer clients do not require that header."
             if name == "gateway" and not path.startswith("/health/"):
                 operation["responses"]["429"] = error_response(
                     429, "Rate limit exceeded"
@@ -277,6 +311,22 @@ def decorate(name, spec):
                     "schema": {"type": "string"},
                     "example": HASH,
                     "description": "SHA-256 of exact response bytes; verify before parsing or reserialization.",
+                }
+            if name == "gateway" and key in {
+                "POST /auth/v1/sessions",
+                "DELETE /auth/v1/sessions/current",
+            }:
+                status = "200" if method == "post" else "204"
+                operation["responses"][status].setdefault("headers", {})[
+                    "Set-Cookie"
+                ] = {
+                    "description": "HttpOnly SameSite=Strict web session; Secure on HTTPS or when WEB_SESSION_SECURE=true. Logout expires the cookie. Browsers restore it through GET /auth/v1/me.",
+                    "schema": {"type": "string"},
+                    "example": (
+                        "myocontrol_web_session=example-only-not-a-valid-session-token; HttpOnly; Max-Age=28800; Path=/; SameSite=strict"
+                        if method == "post"
+                        else "myocontrol_web_session=; HttpOnly; Max-Age=0; Path=/; SameSite=strict"
+                    ),
                 }
     spec["paths"]["/metrics/"] = {
         "get": {

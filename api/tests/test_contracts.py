@@ -30,12 +30,20 @@ class ApiContractTests(unittest.TestCase):
         self.assertNotIn("/experiments/v1/registry/{collection}", paths)
         for collection in ("runs", "models", "results"):
             self.assertEqual(
-                [{"OperatorBearer": []}], paths[f"/cloud/v1/{collection}"]["get"]["security"]
+                [{"OperatorBearer": []}, {"WebSession": []}],
+                paths[f"/cloud/v1/{collection}"]["get"]["security"],
             )
-        self.assertEqual([{"HTTPBasic": []}], paths["/data/v1/participants"]["post"]["security"])
+        self.assertEqual(
+            [{"HTTPBasic": []}], paths["/data/v1/participants"]["post"]["security"]
+        )
         self.assertFalse(paths["/auth/v1/sessions"]["post"].get("security"))
         exported = json.dumps(self.gateway["components"]["schemas"])
-        for private_field in ("password_hash", "token_sha256", "lease_sha256", "storage_key"):
+        for private_field in (
+            "password_hash",
+            "token_sha256",
+            "lease_sha256",
+            "storage_key",
+        ):
             self.assertNotIn(private_field, exported)
 
     def test_live_documentation_serves_the_exact_versioned_specifications(self):
@@ -48,13 +56,15 @@ class ApiContractTests(unittest.TestCase):
                 self.assertEqual(200, client.get("/redoc").status_code)
 
     def test_model_download_contract_preserves_the_digest_header(self):
-        operation = self.gateway["paths"]["/experiments/v1/source-lda-experiments/{run_id}/model"][
-            "get"
-        ]
+        operation = self.gateway["paths"][
+            "/experiments/v1/source-lda-experiments/{run_id}/model"
+        ]["get"]
         self.assertIn("X-Artifact-SHA256", operation["responses"]["200"]["headers"])
         self.assertNotIn(
             "content",
-            self.gateway["paths"]["/auth/v1/sessions/current"]["delete"]["responses"]["204"],
+            self.gateway["paths"]["/auth/v1/sessions/current"]["delete"]["responses"][
+                "204"
+            ],
         )
 
 

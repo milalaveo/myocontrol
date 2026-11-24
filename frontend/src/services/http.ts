@@ -17,6 +17,7 @@ export async function requestJson<T>(path: string, options: RequestOptions = {})
   const timeout = AbortSignal.timeout(20_000)
   const headers = new Headers(init.headers)
   headers.set('Accept', 'application/json')
+  headers.set('X-MyoControl-Web', '1')
   if (token) headers.set('Authorization', `Bearer ${token}`)
   if (init.body) headers.set('Content-Type', 'application/json')
 
@@ -24,6 +25,7 @@ export async function requestJson<T>(path: string, options: RequestOptions = {})
   try {
     response = await fetch(`/api/${path}`, {
       ...init,
+      credentials: 'same-origin',
       headers,
       signal: signal ? AbortSignal.any([signal, timeout]) : timeout,
     })

@@ -31,6 +31,9 @@ test('operator signs in, browses paginated registries, inspects details and sign
   await page.getByRole('button', { name: `View ${secondId}`, exact: true }).click()
   await expect(page).toHaveURL(new RegExp(`/experiments/${secondId}\\?page=2$`))
   await expect(page.getByText(secondId, { exact: true })).toBeVisible()
+  await page.reload()
+  await expect(page).toHaveURL(new RegExp(`/experiments/${secondId}\\?page=2$`))
+  await expect(page.getByRole('heading', { name: 'Registry details' })).toBeVisible()
   await page.goBack()
   await expect(page).toHaveURL(/\/experiments\?page=2$/)
   await expect(page.getByRole('button', { name: 'Next page', exact: true })).toBeDisabled()
@@ -43,12 +46,26 @@ test('operator signs in, browses paginated registries, inspects details and sign
   await page.getByRole('button', { name: `View ${resultId}`, exact: true }).click()
   await expect(page.getByRole('table', { name: 'Confusion counts' })).toBeVisible()
   await expectNoPageOverflow(page)
+  await navigateTo(page, 'Recordings')
+  await expect(page.getByText('demo-participant', { exact: true })).toBeVisible()
+  await expectNoPageOverflow(page)
+  const downloadEvent = page.waitForEvent('download')
+  await page
+    .getByRole('button', { name: 'Download recording 66666666-6666-4666-8666-666666666666' })
+    .click()
+  const download = await downloadEvent
+  expect(download.suggestedFilename()).toBe('recording-66666666-6666-4666-8666-666666666666.json')
+  await page.reload()
+  await expect(page).toHaveURL(/\/recordings$/)
+  await expect(page.getByText('demo-participant', { exact: true })).toBeVisible()
   expect(
     await page.evaluate(() => ({ local: localStorage.length, session: sessionStorage.length })),
   ).toEqual({ local: 0, session: 0 })
   await page.getByRole('button', { name: 'Sign out', exact: true }).click()
   await expect(page).toHaveURL(/\/login$/)
   expect(state.signedOut).toBe(true)
+  await page.reload()
+  await expect(page.getByRole('button', { name: 'Sign in', exact: true })).toBeVisible()
 })
 
 test('protected deep links, retryable failures, empty lists and expired sessions recover correctly', async ({

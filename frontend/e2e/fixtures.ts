@@ -12,7 +12,12 @@ export async function mockCloudApi(
   page: Page,
   options: { failFirstRunRead?: boolean; emptyModels?: boolean } = {},
 ) {
-  const state = { signedOut: false, failRunRead: !!options.failFirstRunRead, expireModels: false }
+  const state = {
+    signedIn: false,
+    signedOut: false,
+    failRunRead: !!options.failFirstRunRead,
+    expireModels: false,
+  }
   const model = {
     id: modelId,
     name: 'Source LDA',
@@ -44,17 +49,40 @@ export async function mockCloudApi(
       if (credentials.email !== testEmail || credentials.password !== testPassword) {
         return route.fulfill({ status: 401, json: { detail: 'Invalid email or password' } })
       }
+      state.signedIn = true
       return route.fulfill({
+        headers: {
+          'Set-Cookie':
+            'myocontrol_web_session=synthetic-browser-session-token; Path=/; HttpOnly; SameSite=Strict',
+        },
         json: {
           access_token: 'synthetic-browser-session-token',
           operator: { id: 'test-operator', display_name: 'Test operator', role: 'operator' },
         },
       })
     }
-    expect(request.headers().authorization).toBe('Bearer synthetic-browser-session-token')
+    expect(request.headers()['x-myocontrol-web']).toBe('1')
+    expect(request.headers().authorization).toBeUndefined()
+    if (url.pathname === '/api/auth/v1/me') {
+      return state.signedIn
+        ? route.fulfill({
+            json: {
+              operator_id: 'test-operator',
+              display_name: 'Test operator',
+              role: 'operator',
+              scope: 'web',
+              expires_at: '2099-01-01T00:00:00Z',
+            },
+          })
+        : route.fulfill({ status: 401, json: { detail: 'Sign in required' } })
+    }
     if (url.pathname === '/api/auth/v1/sessions/current' && request.method() === 'DELETE') {
       state.signedOut = true
-      return route.fulfill({ status: 204 })
+      state.signedIn = false
+      return route.fulfill({
+        status: 204,
+        headers: { 'Set-Cookie': 'myocontrol_web_session=; Path=/; Max-Age=0' },
+      })
     }
     if (url.pathname === '/api/cloud/v1/runs' && state.failRunRead) {
       state.failRunRead = false
@@ -62,6 +90,7 @@ export async function mockCloudApi(
     }
     if (url.pathname.startsWith('/api/cloud/v1/models') && state.expireModels) {
       state.expireModels = false
+      state.signedIn = false
       return route.fulfill({ status: 401, json: { detail: 'Session expired or revoked' } })
     }
     const run = {
@@ -72,6 +101,46 @@ export async function mockCloudApi(
       execution_location: 'local_workstation',
     }
     switch (url.pathname) {
+      case '/api/cloud/v1/recordings':
+        return route.fulfill({
+          json: {
+            items: [
+              {
+                id: '66666666-6666-4666-8666-666666666666',
+                local_recording_id: firstId,
+                source_participant_key: 'demo-participant',
+                source_kind: 'synthetic',
+                source_name: 'Synthetic integration fixture',
+                source_version: '1',
+                sample_count: 2,
+                sample_rate_hz: 1000,
+                channel_count: 4,
+                channel_map: [0, 1, 2, 3],
+                units: 'arbitrary',
+                original_signal_key: secondId,
+                original_start_sample: 0,
+                original_end_sample: 2,
+                received_at: '2026-11-24T10:00:00Z',
+              },
+            ],
+            next_offset: null,
+          },
+        })
+      case '/api/cloud/v1/recordings/66666666-6666-4666-8666-666666666666/signal':
+        return route.fulfill({
+          json: {
+            sample_rate_hz: 1000,
+            channel_map: [0, 1, 2, 3],
+            units: 'arbitrary',
+            source_kind: 'synthetic',
+            source_name: 'Synthetic integration fixture',
+            source_version: '1',
+            samples: [
+              [1, 2, 3, 4],
+              [2, 3, 4, 5],
+            ],
+          },
+        })
       case '/api/cloud/v1/runs': {
         const offset = Number(url.searchParams.get('offset'))
         return route.fulfill({

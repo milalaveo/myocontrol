@@ -11,7 +11,7 @@ flowchart LR
     Router --> Shell[WorkspaceLayout]
     Shell --> Registry[RegistryPage]
     Registry --> Views[RegistryTable + RegistryDetails]
-    Login --> Auth[AuthProvider: in-memory session]
+    Login --> Auth[AuthProvider: server-validated cookie session]
     Shell --> Auth
     Registry --> Hook[useRegistry: request lifecycle]
     Hook --> Auth
@@ -46,6 +46,8 @@ The three registries share one page because their loading, pagination and naviga
 
 ## Routes and navigation
 
+`/recordings` lists owned desktop recording parts with provenance/channel metadata and downloads the original samples as JSON. It uses a separate page/service because its data model differs from experiment/model/evaluation registries.
+
 | Route                                             | Access and behaviour                                                      |
 | ------------------------------------------------- | ------------------------------------------------------------------------- |
 | `/login`                                          | Public; authenticated operators return to their intended protected route. |
@@ -60,7 +62,8 @@ React Router controls navigation without full-page reloads. nginx uses the SPA f
 
 ```mermaid
 flowchart TD
-    Open[Open portal or protected record link] --> Session{Session in memory?}
+    Open[Open portal or protected record link] --> Restore[GET /auth/v1/me using HttpOnly cookie]
+    Restore --> Session{Session valid?}
     Session -->|No| Form[Sign-in form]
     Form --> Valid{Fields valid?}
     Valid -->|No| Fields[Show field errors; do not call API]
@@ -69,7 +72,7 @@ flowchart TD
     Login --> Accepted{Credentials accepted?}
     Accepted -->|No| Retry[Show error; clear rejected password]
     Retry --> Form
-    Accepted -->|Yes| Save[Keep bearer session in memory]
+    Accepted -->|Yes| Save[Set HttpOnly cookie; retain operator summary]
     Save --> Destination[Restore intended protected route]
     Session -->|Yes| Destination
     Destination --> List[Load registry or record through API]
@@ -98,28 +101,28 @@ flowchart TD
 
 ## Tech stack justification
 
-| Choice                         | Reason for this project                                                                                                                                |
-| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| React                          | Supports the component structure needed by the cloud portal and allows later reuse of suitable components in Electron.                                 |
-| TypeScript                     | Makes account, registry and error contracts explicit and catches incompatible component/API usage during the build.                                    |
-| Vite                           | Provides the SPA development server, same-origin development proxy and production bundling with limited configuration.                                 |
-| React Router                   | Gives registries and details stable URLs, protected navigation, intended-route restoration and browser history.                                        |
-| Carbon React and Carbon icons  | Provides a consistent accessible component foundation. White theme, spacing/type tokens and locally bundled IBM Plex keep the interface consistent.    |
-| Sass                           | Compiles Carbon's official styles and token-based layout rules.                                                                                        |
-| Fetch and React hooks/context  | Sufficient for three read-only registries and a memory-only session; avoids adding a second cache or global state library without a demonstrated need. |
-| Vitest, Testing Library, jsdom | Tests form interaction, rendered component behaviour and HTTP error handling without a running database.                                               |
-| Playwright                     | Runs complete browser interactions against built assets at the three required viewport sizes.                                                          |
-| nginx and Docker               | Serves built assets and forwards `/api` to the existing gateway; the browser receives no database credentials.                                         |
+| Choice                         | Reason for this project                                                                                                                                                          |
+| ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| React                          | Supports the component structure needed by the cloud portal and allows later reuse of suitable components in Electron.                                                           |
+| TypeScript                     | Makes account, registry and error contracts explicit and catches incompatible component/API usage during the build.                                                              |
+| Vite                           | Provides the SPA development server, same-origin development proxy and production bundling with limited configuration.                                                           |
+| React Router                   | Gives registries and details stable URLs, protected navigation, intended-route restoration and browser history.                                                                  |
+| Carbon React and Carbon icons  | Provides a consistent accessible component foundation. White theme, spacing/type tokens and locally bundled IBM Plex keep the interface consistent.                              |
+| Sass                           | Compiles Carbon's official styles and token-based layout rules.                                                                                                                  |
+| Fetch and React hooks/context  | Sufficient for three read-only registries and a cookie-backed session restored by the gateway; avoids adding a second cache or global state library without a demonstrated need. |
+| Vitest, Testing Library, jsdom | Tests form interaction, rendered component behaviour and HTTP error handling without a running database.                                                                         |
+| Playwright                     | Runs complete browser interactions against built assets at the three required viewport sizes.                                                                                    |
+| nginx and Docker               | Serves built assets and forwards `/api` to the existing gateway; the browser receives no database credentials.                                                                   |
 
 References: [Carbon React](https://carbondesignsystem.com/getting-started/developing/carbon-core/react/), [React](https://react.dev/), [React Router](https://reactrouter.com/), [Vite](https://vite.dev/), [Vitest](https://vitest.dev/), [Playwright](https://playwright.dev/).
 
 ## Validation, errors and session boundaries
 
 - `LoginForm` validates required values and email format before calling the API; the server remains authoritative. Loading disables repeated submissions. Rejected passwords are cleared.
-- The HTTP client attaches bearer credentials, limits requests to 20 seconds, handles non-JSON error responses and converts failures to `ApiError` with a status. Navigation cancellation is preserved.
+- The HTTP client sends same-origin cookies and the custom browser header for mutations, limits requests to 20 seconds, handles non-JSON error responses and converts failures to `ApiError` with a status. Navigation cancellation is preserved.
 - Registry requests use one lifecycle hook and shared error presentation. A 401 clears access and returns to login with an explanation; network failures remain retryable. A failed sign-out keeps the session visible so revocation can be retried.
 - `ErrorBoundary` catches rendering failures across the application and provides an explicit reload action. It complements API handling; React boundaries do not catch every asynchronous exception.
-- Tokens stay in React memory. No credentials are put in URLs, browser storage, source configuration or logs. A full reload requires sign-in; centrally stored account/research records remain on the server.
+- The server stores token digests and the browser keeps an HttpOnly SameSite=Strict session cookie. React retains only the operator summary. No credentials enter URLs, localStorage/sessionStorage, source configuration or logs. Reload validates the cookie through `/auth/v1/me`; expired/revoked sessions require sign-in. Cookie-authenticated mutations include `X-MyoControl-Web: 1`.
 - Owner filtering is enforced by the gateway/ML API, never inferred from hidden frontend controls.
 
 ## Verification and its limits
@@ -128,4 +131,4 @@ The [frontend README](README.md) maps each assessment requirement to code, docum
 
 Playwright intercepts the HTTP boundary with synthetic response fixtures. It tests the built SPA, routing, navigation, validation, pagination, details, recovery and responsive layouts without changing research data or depending on an operator password. It does **not** prove gateway/database integration. The separate [gateway integration tests](../gateway/tests/test_cloud_access.py) cover real PostgreSQL ownership/session behaviour. The deployed app continues to call real APIs; fixtures are confined to `e2e/`.
 
-General training submission, remote worker execution/publication, artifact transfer and Electron synchronization remain outside this implemented read-only portal slice.
+General training submission, remote worker execution/publication, model/package transfer and desktop report synchronization remain outside this portal slice. Owned desktop recording uploads are visible under Recordings with JSON sample download.

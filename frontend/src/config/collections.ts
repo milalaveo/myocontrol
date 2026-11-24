@@ -9,7 +9,8 @@ export const collections = {
     description: 'Track experiments executed on your local workstation.',
     title: 'Experiment history',
     tableDescription: 'Configuration, execution status and reproducibility details.',
-    empty: 'Your registered experiments will appear here.',
+    empty:
+      'Your registered experiments will appear here. Signals uploaded from Electron are listed under Recordings.',
   },
   models: {
     name: 'Models',

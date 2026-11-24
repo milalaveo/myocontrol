@@ -118,6 +118,11 @@ export default function RegistryPage({ collection }: { collection: Collection })
               pageSize={PAGE_SIZE}
               pageSizes={[PAGE_SIZE]}
               pagesUnknown
+              itemText={() =>
+                state.page.items.length
+                  ? `${offset + 1}–${offset + state.page.items.length} items`
+                  : '0 items'
+              }
               isLastPage={state.page.next_offset == null}
               totalItems={offset + state.page.items.length}
               pageSizeInputDisabled

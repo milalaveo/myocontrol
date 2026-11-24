@@ -205,8 +205,12 @@ RECOGNITION = {
 GATEWAY = {
     "POST /auth/v1/sessions": (
         "Sign in an operator",
-        "Returns an opaque web bearer session valid for eight hours. Accounts are created with the administrative CLI, not public registration. Incorrect, unknown and disabled accounts receive the same error.",
-        {401: "Invalid email or password", 503: "Operator access is not configured"},
+        "Returns an opaque web bearer session valid for eight hours and sets an HttpOnly SameSite=Strict browser cookie. Accounts are created with the administrative CLI, not public registration. Incorrect, unknown and disabled accounts receive the same error. Requests carrying Origin must include X-MyoControl-Web: 1. Cookie-authenticated mutations require the same custom header; cross-origin CORS access is not enabled.",
+        {
+            401: "Invalid email or password",
+            403: "Browser request header required",
+            503: "Operator access is not configured",
+        },
     ),
     "GET /auth/v1/me": (
         "Read the authenticated operator",
@@ -215,8 +219,12 @@ GATEWAY = {
     ),
     "DELETE /auth/v1/sessions/current": (
         "Revoke the current session",
-        "HTTP 204 has no body. A second request with the revoked token receives 401.",
-        {401: "Session expired or revoked", 503: "Operator access unavailable"},
+        "HTTP 204 has no body. Revokes the session and expires the browser cookie. Cookie authentication requires X-MyoControl-Web: 1. A second request with the revoked token receives 401.",
+        {
+            401: "Session expired or revoked",
+            403: "Browser request header required",
+            503: "Operator access unavailable",
+        },
     ),
     "POST /auth/v1/clients": (
         "Register a local client and issue its scoped token",

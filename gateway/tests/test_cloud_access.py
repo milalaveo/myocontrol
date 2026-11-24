@@ -61,7 +61,9 @@ class CloudAccessTests(unittest.TestCase):
         self.identity_engine.start()
         self.addCleanup(self.identity_engine.stop)
         self.email = f"{uuid.uuid4()}@example.test"
-        self.owner = identity.create_operator(self.email, "HTTP test", "review-only-password")
+        self.owner = identity.create_operator(
+            self.email, "HTTP test", "review-only-password"
+        )
 
         def session():
             with self.sessions() as s:
@@ -109,23 +111,33 @@ class CloudAccessTests(unittest.TestCase):
         token = self.login()
         headers = self.headers(token)
         self.assertEqual(
-            str(self.owner), self.client.get("/auth/v1/me", headers=headers).json()["operator_id"]
+            str(self.owner),
+            self.client.get("/auth/v1/me", headers=headers).json()["operator_id"],
         )
         with self.db.connect() as c:
             stored = c.execute(
-                text("SELECT token_sha256 FROM identity.access_sessions WHERE operator_id=:id"),
+                text(
+                    "SELECT token_sha256 FROM identity.access_sessions WHERE operator_id=:id"
+                ),
                 {"id": self.owner},
             ).scalar_one()
         self.assertEqual(identity.digest(token), stored)
         self.assertNotEqual(token, stored)
         self.assertEqual(
-            204, self.client.delete("/auth/v1/sessions/current", headers=headers).status_code
+            204,
+            self.client.delete(
+                "/auth/v1/sessions/current", headers=headers
+            ).status_code,
         )
-        self.assertEqual(401, self.client.get("/auth/v1/me", headers=headers).status_code)
+        self.assertEqual(
+            401, self.client.get("/auth/v1/me", headers=headers).status_code
+        )
         self.assertEqual(401, self.client.get("/auth/v1/me").status_code)
         self.assertEqual(
             401,
-            self.client.get("/auth/v1/me", headers={"Authorization": "Bearer short"}).status_code,
+            self.client.get(
+                "/auth/v1/me", headers={"Authorization": "Bearer short"}
+            ).status_code,
         )
 
     def test_wrong_unknown_and_disabled_account(self):
@@ -142,13 +154,70 @@ class CloudAccessTests(unittest.TestCase):
                 text("UPDATE identity.operators SET state='disabled' WHERE id=:id"),
                 {"id": self.owner},
             )
-        self.assertEqual(401, self.client.get("/auth/v1/me", headers=headers).status_code)
+        self.assertEqual(
+            401, self.client.get("/auth/v1/me", headers=headers).status_code
+        )
         self.assertEqual(
             401,
             self.client.post(
-                "/auth/v1/sessions", json={"email": self.email, "password": "review-only-password"}
+                "/auth/v1/sessions",
+                json={"email": self.email, "password": "review-only-password"},
             ).status_code,
         )
+
+    def test_browser_cookie_restores_session_and_requires_header_for_mutations(self):
+        token = self.login()
+        cookie = self.client.cookies.get(identity.COOKIE_NAME)
+        self.assertEqual(token, cookie)
+        result = self.client.get("/auth/v1/me")
+        self.assertEqual(200, result.status_code, result.text)
+        self.assertEqual(str(self.owner), result.json()["operator_id"])
+        self.assertEqual("no-store", result.headers["cache-control"])
+        self.assertEqual(
+            403, self.client.delete("/auth/v1/sessions/current").status_code
+        )
+        self.assertEqual(
+            204,
+            self.client.delete(
+                "/auth/v1/sessions/current", headers={"X-MyoControl-Web": "1"}
+            ).status_code,
+        )
+        self.assertIsNone(self.client.cookies.get(identity.COOKIE_NAME))
+        self.assertEqual(401, self.client.get("/auth/v1/me").status_code)
+
+    def test_browser_login_header_cookie_flags_and_client_scope(self):
+        body = {"email": self.email, "password": "review-only-password"}
+        self.assertEqual(
+            403,
+            self.client.post(
+                "/auth/v1/sessions",
+                json=body,
+                headers={"Origin": "http://untrusted.example"},
+            ).status_code,
+        )
+        result = self.client.post(
+            "/auth/v1/sessions",
+            json=body,
+            headers={"Origin": "http://testserver", "X-MyoControl-Web": "1"},
+        )
+        self.assertEqual(200, result.status_code, result.text)
+        header = result.headers["set-cookie"]
+        for flag in ("HttpOnly", "SameSite=strict", "Max-Age=28800", "Path=/"):
+            self.assertIn(flag, header)
+        issued = self.client.post(
+            "/auth/v1/clients",
+            json={"kind": "desktop", "name": "Test desktop", "platform": "test"},
+            headers=self.headers(result.json()["access_token"]),
+        )
+        self.assertEqual(201, issued.status_code, issued.text)
+        self.client.cookies.clear()
+        self.client.cookies.set(identity.COOKIE_NAME, issued.json()["access_token"])
+        self.assertEqual(401, self.client.get("/auth/v1/me").status_code)
+        with patch.dict(os.environ, {"WEB_SESSION_SECURE": "true"}):
+            self.assertIn(
+                "Secure",
+                self.client.post("/auth/v1/sessions", json=body).headers["set-cookie"],
+            )
 
     def test_expired_session_and_database_failure(self):
         token = uuid.uuid4().hex + uuid.uuid4().hex
@@ -185,10 +254,12 @@ class CloudAccessTests(unittest.TestCase):
             body = response.json()
             token_headers = self.headers(body["access_token"])
             self.assertEqual(
-                kind, self.client.get("/auth/v1/me", headers=token_headers).json()["scope"]
+                kind,
+                self.client.get("/auth/v1/me", headers=token_headers).json()["scope"],
             )
             self.assertEqual(
-                403, self.client.get("/auth/v1/clients", headers=token_headers).status_code
+                403,
+                self.client.get("/auth/v1/clients", headers=token_headers).status_code,
             )
             listing = self.client.get("/auth/v1/clients", headers=headers)
             self.assertNotIn(body["access_token"], listing.text)
@@ -198,9 +269,14 @@ class CloudAccessTests(unittest.TestCase):
                     f'/auth/v1/clients/{body["client_id"]}', headers=headers
                 ).status_code,
             )
-            self.assertEqual(401, self.client.get("/auth/v1/me", headers=token_headers).status_code)
+            self.assertEqual(
+                401, self.client.get("/auth/v1/me", headers=token_headers).status_code
+            )
         self.assertEqual(
-            404, self.client.delete(f"/auth/v1/clients/{uuid.uuid4()}", headers=headers).status_code
+            404,
+            self.client.delete(
+                f"/auth/v1/clients/{uuid.uuid4()}", headers=headers
+            ).status_code,
         )
         self.assertEqual(
             422,
@@ -236,10 +312,15 @@ class CloudAccessTests(unittest.TestCase):
         self.assertEqual(1, listing.json()["next_offset"])
         self.assertEqual(
             1,
-            len(self.ml.get("/v1/registry/runs?offset=1&limit=1", headers=headers).json()["items"]),
+            len(
+                self.ml.get(
+                    "/v1/registry/runs?offset=1&limit=1", headers=headers
+                ).json()["items"]
+            ),
         )
         self.assertEqual(
-            404, self.ml.get(f"/v1/registry/runs/{foreign}", headers=headers).status_code
+            404,
+            self.ml.get(f"/v1/registry/runs/{foreign}", headers=headers).status_code,
         )
         detail = self.ml.get(f"/v1/registry/runs/{first}", headers=headers)
         self.assertEqual(200, detail.status_code)
@@ -249,11 +330,17 @@ class CloudAccessTests(unittest.TestCase):
         )
         for collection in ("models", "results"):
             self.assertEqual(
-                [], self.ml.get(f"/v1/registry/{collection}", headers=headers).json()["items"]
+                [],
+                self.ml.get(f"/v1/registry/{collection}", headers=headers).json()[
+                    "items"
+                ],
             )
-        self.assertEqual(404, self.ml.get("/v1/registry/missing", headers=headers).status_code)
         self.assertEqual(
-            404, self.ml.get(f"/v1/registry/missing/{first}", headers=headers).status_code
+            404, self.ml.get("/v1/registry/missing", headers=headers).status_code
+        )
+        self.assertEqual(
+            404,
+            self.ml.get(f"/v1/registry/missing/{first}", headers=headers).status_code,
         )
 
     def test_registry_denies_direct_and_basic_access(self):
@@ -261,19 +348,24 @@ class CloudAccessTests(unittest.TestCase):
         self.assertEqual(
             401,
             self.ml.get(
-                "/v1/registry/runs", headers={**self.ml_headers(), "X-Cloud-Key": "wrong"}
+                "/v1/registry/runs",
+                headers={**self.ml_headers(), "X-Cloud-Key": "wrong"},
             ).status_code,
         )
         self.assertEqual(
             403,
-            self.client.get("/experiments/v1/registry/runs", auth=("dev", "dev-only")).status_code,
+            self.client.get(
+                "/experiments/v1/registry/runs", auth=("dev", "dev-only")
+            ).status_code,
         )
         with patch.dict(os.environ, {"CLOUD_INTERNAL_KEY": ""}):
             self.assertEqual(
-                503, self.ml.get("/v1/registry/runs", headers=self.ml_headers()).status_code
+                503,
+                self.ml.get("/v1/registry/runs", headers=self.ml_headers()).status_code,
             )
             self.assertEqual(
-                503, self.client.get("/cloud/v1/runs", headers=self.headers()).status_code
+                503,
+                self.client.get("/cloud/v1/runs", headers=self.headers()).status_code,
             )
 
     def test_gateway_uses_verified_owner_and_forwards_pagination(self):
@@ -281,30 +373,50 @@ class CloudAccessTests(unittest.TestCase):
         transport = AsyncMock()
 
         async def forward(url, *, params, headers):
-            result = self.ml.get(url.replace("http://ml", ""), params=params, headers=headers)
+            result = self.ml.get(
+                url.replace("http://ml", ""), params=params, headers=headers
+            )
             return httpx.Response(result.status_code, content=result.content)
 
         transport.__aenter__.return_value.get.side_effect = forward
-        headers = {**self.headers(), "X-Operator-ID": str(uuid.uuid4()), "X-Cloud-Key": "spoof"}
+        headers = {
+            **self.headers(),
+            "X-Operator-ID": str(uuid.uuid4()),
+            "X-Cloud-Key": "spoof",
+        }
         with patch("gateway.cloud.httpx.AsyncClient", return_value=transport):
             result = self.client.get(f"/cloud/v1/runs/{run}", headers=headers)
             self.assertEqual(200, result.status_code, result.text)
             self.assertEqual(
-                422, self.client.get("/cloud/v1/runs?limit=101", headers=headers).status_code
+                422,
+                self.client.get(
+                    "/cloud/v1/runs?limit=101", headers=headers
+                ).status_code,
             )
-            listed = self.client.get(f"/cloud/v1/runs?item_id={uuid.uuid4()}", headers=headers)
+            listed = self.client.get(
+                f"/cloud/v1/runs?item_id={uuid.uuid4()}", headers=headers
+            )
             self.assertIn("items", listed.json())
             listing = self.client.get("/cloud/v1/runs?limit=1", headers=headers)
             self.assertEqual(str(run), listing.json()["items"][0]["id"])
-            self.assertEqual(404, self.client.get("/cloud/v1/secret", headers=headers).status_code)
             self.assertEqual(
-                422, self.client.get("/cloud/v1/runs/not-a-uuid", headers=headers).status_code
+                404, self.client.get("/cloud/v1/secret", headers=headers).status_code
             )
-        for cause, status in ((httpx.ReadTimeout("test"), 504), (httpx.ConnectError("test"), 502)):
+            self.assertEqual(
+                422,
+                self.client.get(
+                    "/cloud/v1/runs/not-a-uuid", headers=headers
+                ).status_code,
+            )
+        for cause, status in (
+            (httpx.ReadTimeout("test"), 504),
+            (httpx.ConnectError("test"), 502),
+        ):
             transport.__aenter__.return_value.get.side_effect = cause
             with patch("gateway.cloud.httpx.AsyncClient", return_value=transport):
                 self.assertEqual(
-                    status, self.client.get("/cloud/v1/runs", headers=headers).status_code
+                    status,
+                    self.client.get("/cloud/v1/runs", headers=headers).status_code,
                 )
 
     def test_published_models_and_confusion_matrix_detail(self):
@@ -313,7 +425,8 @@ class CloudAccessTests(unittest.TestCase):
 
         spec = importlib.util.spec_from_file_location(
             "db_fixtures",
-            Path(__file__).resolve().parents[2] / "database/tests/test_cloud_database.py",
+            Path(__file__).resolve().parents[2]
+            / "database/tests/test_cloud_database.py",
         )
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
@@ -336,7 +449,8 @@ class CloudAccessTests(unittest.TestCase):
                 1, len(self.ml.get("/v1/registry/models", headers=own).json()["items"])
             )
             self.assertEqual(
-                200, self.ml.get(f"/v1/registry/models/{model}", headers=own).status_code
+                200,
+                self.ml.get(f"/v1/registry/models/{model}", headers=own).status_code,
             )
             self.assertEqual(
                 1, len(self.ml.get("/v1/registry/results", headers=own).json()["items"])

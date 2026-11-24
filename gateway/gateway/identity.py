@@ -1,4 +1,4 @@
-"""Cloud identity boundary. Raw session tokens are returned once and never persisted."""
+"""Cloud identity boundary. Opaque session credentials are persisted only as digests in PostgreSQL."""
 
 import hashlib
 import os
@@ -9,14 +9,19 @@ from uuid import UUID
 
 from argon2 import PasswordHasher
 from argon2.exceptions import InvalidHashError, VerificationError
-from fastapi import APIRouter, Depends, HTTPException, Response
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel, Field
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import URL
 from sqlalchemy.exc import SQLAlchemyError
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from fastapi.security import APIKeyCookie, HTTPAuthorizationCredentials, HTTPBearer
 
-from .schemas import ClientResponse, ClientTokenResponse, CurrentOperatorResponse, SessionResponse
+from .schemas import (
+    ClientResponse,
+    ClientTokenResponse,
+    CurrentOperatorResponse,
+    SessionResponse,
+)
 
 router = APIRouter(prefix="/auth/v1", tags=["operator access"])
 hasher = PasswordHasher()
@@ -27,6 +32,25 @@ bearer = HTTPBearer(
     scheme_name="OperatorBearer",
     description="Opaque operator/client token issued by POST /auth/v1/sessions or POST /auth/v1/clients.",
 )
+COOKIE_NAME = "myocontrol_web_session"
+web_cookie = APIKeyCookie(
+    name=COOKIE_NAME,
+    auto_error=False,
+    scheme_name="WebSession",
+    description="HttpOnly browser session issued at sign-in. Cookie-authenticated mutations require X-MyoControl-Web: 1.",
+)
+
+
+def require_browser_header(request: Request):
+    if request.headers.get("X-MyoControl-Web") != "1":
+        raise HTTPException(403, "Browser request header required")
+
+
+def secure_cookie(request: Request):
+    return (
+        request.url.scheme == "https"
+        or os.environ.get("WEB_SESSION_SECURE", "").lower() == "true"
+    )
 
 
 @lru_cache
@@ -51,25 +75,36 @@ def digest(token: str):
     return hashlib.sha256(token.encode()).hexdigest()
 
 
-def principal(credentials: HTTPAuthorizationCredentials | None = Depends(bearer)):
-    token = credentials.credentials if credentials else ""
+def principal(
+    request: Request,
+    credentials: HTTPAuthorizationCredentials | None = Depends(bearer),
+    cookie: str | None = Depends(web_cookie),
+):
+    using_cookie = credentials is None
+    token = credentials.credentials if credentials else cookie or ""
     if not 32 <= len(token) <= 256:
-        raise HTTPException(401, "Sign in required", headers={"WWW-Authenticate": "Bearer"})
+        raise HTTPException(
+            401, "Sign in required", headers={"WWW-Authenticate": "Bearer"}
+        )
     with engine().connect() as connection:
         row = (
             connection.execute(
-                text("""SELECT v.*, o.display_name, o.role
+                text(
+                    """SELECT v.*, o.display_name, o.role
             FROM identity.valid_session_ids v JOIN identity.access_sessions s ON s.id = v.id
-            JOIN identity.operators o ON o.id = v.operator_id WHERE s.token_sha256 = :hash"""),
+            JOIN identity.operators o ON o.id = v.operator_id WHERE s.token_sha256 = :hash"""
+                ),
                 {"hash": digest(token)},
             )
             .mappings()
             .one_or_none()
         )
-    if row is None:
+    if row is None or (using_cookie and row["scope"] != "web"):
         raise HTTPException(
             401, "Session expired or revoked", headers={"WWW-Authenticate": "Bearer"}
         )
+    if using_cookie and request.method not in {"GET", "HEAD", "OPTIONS"}:
+        require_browser_header(request)
     return dict(row)
 
 
@@ -82,23 +117,31 @@ def web_principal(actor=Depends(principal)):
 class Login(BaseModel):
     email: str = Field(min_length=3, max_length=320)
     password: str = Field(
-        min_length=1, max_length=1024, json_schema_extra={"format": "password", "writeOnly": True}
+        min_length=1,
+        max_length=1024,
+        json_schema_extra={"format": "password", "writeOnly": True},
     )
 
 
 @router.post("/sessions", response_model=SessionResponse)
-def login(body: Login, response: Response):
+def login(body: Login, request: Request, response: Response):
+    if request.headers.get("Origin"):
+        require_browser_header(request)
     with engine().begin() as connection:
         row = (
             connection.execute(
-                text("SELECT * FROM identity.operators WHERE email = :email FOR UPDATE"),
+                text(
+                    "SELECT * FROM identity.operators WHERE email = :email FOR UPDATE"
+                ),
                 {"email": body.email.strip().lower()},
             )
             .mappings()
             .one_or_none()
         )
         try:
-            valid = hasher.verify(row["password_hash"] if row else dummy_hash, body.password)
+            valid = hasher.verify(
+                row["password_hash"] if row else dummy_hash, body.password
+            )
         except (VerificationError, InvalidHashError):
             valid = False
         if not valid or row is None or row["state"] != "active":
@@ -106,8 +149,10 @@ def login(body: Login, response: Response):
         token = secrets.token_urlsafe(48)
         expires = datetime.now(timezone.utc) + timedelta(hours=8)
         connection.execute(
-            text("""INSERT INTO identity.access_sessions(operator_id,token_sha256,scope,expires_at)
-            VALUES (:operator,:hash,'web',:expires)"""),
+            text(
+                """INSERT INTO identity.access_sessions(operator_id,token_sha256,scope,expires_at)
+            VALUES (:operator,:hash,'web',:expires)"""
+            ),
             {"operator": row["id"], "hash": digest(token), "expires": expires},
         )
         if hasher.check_needs_rehash(row["password_hash"]):
@@ -116,11 +161,25 @@ def login(body: Login, response: Response):
                 {"hash": hasher.hash(body.password), "id": row["id"]},
             )
     response.headers["Cache-Control"] = "no-store"
+    response.set_cookie(
+        COOKIE_NAME,
+        token,
+        max_age=8 * 60 * 60,
+        expires=expires,
+        httponly=True,
+        secure=secure_cookie(request),
+        samesite="strict",
+        path="/",
+    )
     return {
         "access_token": token,
         "token_type": "bearer",
         "expires_at": expires,
-        "operator": {"id": row["id"], "display_name": row["display_name"], "role": row["role"]},
+        "operator": {
+            "id": row["id"],
+            "display_name": row["display_name"],
+            "role": row["role"],
+        },
     }
 
 
@@ -128,12 +187,19 @@ def login(body: Login, response: Response):
 def me(actor=Depends(principal)):
     return {
         key: actor[key]
-        for key in ("operator_id", "display_name", "role", "scope", "client_id", "expires_at")
+        for key in (
+            "operator_id",
+            "display_name",
+            "role",
+            "scope",
+            "client_id",
+            "expires_at",
+        )
     }
 
 
 @router.delete("/sessions/current", status_code=204)
-def logout(actor=Depends(principal)):
+def logout(request: Request, response: Response, actor=Depends(principal)):
     with engine().begin() as connection:
         connection.execute(
             text(
@@ -141,6 +207,13 @@ def logout(actor=Depends(principal)):
             ),
             {"id": actor["id"]},
         )
+    response.delete_cookie(
+        COOKIE_NAME,
+        path="/",
+        httponly=True,
+        secure=secure_cookie(request),
+        samesite="strict",
+    )
 
 
 class ClientCreate(BaseModel):
@@ -150,7 +223,9 @@ class ClientCreate(BaseModel):
 
 
 @router.post("/clients", status_code=201, response_model=ClientTokenResponse)
-def register_client(body: ClientCreate, response: Response, actor=Depends(web_principal)):
+def register_client(
+    body: ClientCreate, response: Response, actor=Depends(web_principal)
+):
     if actor["role"] == "reviewer":
         raise HTTPException(403, "Reviewer access is read-only")
     if not body.name.strip() or not body.platform.strip():
@@ -192,8 +267,10 @@ def list_clients(actor=Depends(web_principal)):
         return [
             dict(row)
             for row in connection.execute(
-                text("""SELECT id,kind,name,platform,state,created_at
-            FROM identity.clients WHERE operator_id=:operator ORDER BY created_at DESC"""),
+                text(
+                    """SELECT id,kind,name,platform,state,created_at
+            FROM identity.clients WHERE operator_id=:operator ORDER BY created_at DESC"""
+                ),
                 {"operator": actor["operator_id"]},
             ).mappings()
         ]
@@ -217,8 +294,10 @@ def create_operator(email: str, display_name: str, password: str, role="operator
         raise ValueError("Use a password between 12 and 1024 characters")
     with engine().begin() as connection:
         return connection.execute(
-            text("""INSERT INTO identity.operators(email,display_name,password_hash,role)
-            VALUES (:email,:name,:hash,:role) RETURNING id"""),
+            text(
+                """INSERT INTO identity.operators(email,display_name,password_hash,role)
+            VALUES (:email,:name,:hash,:role) RETURNING id"""
+            ),
             {
                 "email": email.strip().lower(),
                 "name": display_name.strip(),

@@ -5,6 +5,7 @@ import WorkspaceLayout from './components/WorkspaceLayout'
 import { AuthProvider } from './context/AuthContext'
 import LoginPage from './pages/LoginPage'
 import RegistryPage from './pages/RegistryPage'
+import RecordingsPage from './pages/RecordingsPage'
 
 export default function App() {
   return (
@@ -15,6 +16,7 @@ export default function App() {
             <Routes>
               <Route path="/login" element={<LoginPage />} />
               <Route element={<WorkspaceLayout />}>
+                <Route path="/recordings" element={<RecordingsPage />} />
                 <Route
                   path="/experiments"
                   element={<RegistryPage key="runs" collection="runs" />}

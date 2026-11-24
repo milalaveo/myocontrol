@@ -19,7 +19,7 @@ export default function LoginPage() {
   const navigate = useNavigate()
   const from = (location.state as { from?: string } | null)?.from
   const destination =
-    from && /^\/(experiments|models|results)(\/|\?|$)/.test(from) ? from : '/experiments'
+    from && /^\/(recordings|experiments|models|results)(\/|\?|$)/.test(from) ? from : '/experiments'
 
   if (session) return <Navigate to={destination} replace />
 

@@ -16,12 +16,10 @@ export function useRegistry(
   refresh: number,
 ) {
   const { session, expireSession } = useAuth()
-  const token = session?.access_token
   const [state, setState] = useState<State>({ status: 'loading' })
 
   useEffect(() => {
-    if (!token) return
-    const accessToken = token
+    if (!session) return
     const controller = new AbortController()
     setState({ status: 'loading' })
 
@@ -30,23 +28,23 @@ export function useRegistry(
         const result = id
           ? {
               page: { items: [], next_offset: null },
-              detail: await getRegistryDetail(collection, id, accessToken, controller.signal),
+              detail: await getRegistryDetail(collection, id, controller.signal),
             }
           : {
-              page: await listRegistry(collection, offset, accessToken, controller.signal),
+              page: await listRegistry(collection, offset, controller.signal),
               detail: null,
             }
         if (!controller.signal.aborted) setState({ status: 'success', ...result })
       } catch (error) {
         if (controller.signal.aborted) return
-        if (error instanceof ApiError && error.status === 401) expireSession(accessToken)
+        if (error instanceof ApiError && error.status === 401) expireSession()
         else setState({ status: 'error', message: errorMessage(error) })
       }
     }
 
     void load()
     return () => controller.abort()
-  }, [collection, offset, id, refresh, token, expireSession])
+  }, [collection, offset, id, refresh, session, expireSession])
 
   return state
 }

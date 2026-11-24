@@ -3154,6 +3154,12 @@
         "description": "Opaque operator/client token issued by POST /auth/v1/sessions or POST /auth/v1/clients.",
         "scheme": "bearer",
         "type": "http"
+      },
+      "WebSession": {
+        "description": "HttpOnly browser session issued at sign-in. Cookie-authenticated mutations require X-MyoControl-Web: 1.",
+        "in": "cookie",
+        "name": "myocontrol_web_session",
+        "type": "apiKey"
       }
     }
   },
@@ -3334,6 +3340,9 @@
         "security": [
           {
             "OperatorBearer": []
+          },
+          {
+            "WebSession": []
           }
         ],
         "summary": "List your registered clients",
@@ -3342,8 +3351,24 @@
         ]
       },
       "post": {
-        "description": "Requires a web session and operator/administrator role. Kind is desktop or training_worker. Token expires after thirty days and is returned only once. This provisions access; remote job execution/synchronization is not implemented.",
+        "description": "Requires a web session and operator/administrator role. Kind is desktop or training_worker. Token expires after thirty days and is returned only once. This provisions access; remote job execution/synchronization is not implemented. Cookie-authenticated mutations additionally require X-MyoControl-Web: 1. Bearer clients do not require that header.",
         "operationId": "register_client_auth_v1_clients_post",
+        "parameters": [
+          {
+            "description": "Required for browser sign-in carrying Origin and for cookie-authenticated mutations. Optional for bearer API clients. The SPA sends this automatically.",
+            "example": "1",
+            "in": "header",
+            "name": "X-MyoControl-Web",
+            "required": false,
+            "schema": {
+              "default": "1",
+              "enum": [
+                "1"
+              ],
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -3561,6 +3586,9 @@
         "security": [
           {
             "OperatorBearer": []
+          },
+          {
+            "WebSession": []
           }
         ],
         "summary": "Register a local client and issue its scoped token",
@@ -3571,7 +3599,7 @@
     },
     "/auth/v1/clients/{client_id}": {
       "delete": {
-        "description": "Requires a web session. Revocation immediately invalidates that client's sessions and is irreversible; a foreign client returns 404.",
+        "description": "Requires a web session. Revocation immediately invalidates that client's sessions and is irreversible; a foreign client returns 404. Cookie-authenticated mutations additionally require X-MyoControl-Web: 1. Bearer clients do not require that header.",
         "operationId": "revoke_client_auth_v1_clients__client_id__delete",
         "parameters": [
           {
@@ -3582,6 +3610,20 @@
             "schema": {
               "format": "uuid",
               "title": "Client Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Required for browser sign-in carrying Origin and for cookie-authenticated mutations. Optional for bearer API clients. The SPA sends this automatically.",
+            "example": "1",
+            "in": "header",
+            "name": "X-MyoControl-Web",
+            "required": false,
+            "schema": {
+              "default": "1",
+              "enum": [
+                "1"
+              ],
               "type": "string"
             }
           }
@@ -3791,6 +3833,9 @@
         "security": [
           {
             "OperatorBearer": []
+          },
+          {
+            "WebSession": []
           }
         ],
         "summary": "Revoke your registered client",
@@ -3937,6 +3982,9 @@
         "security": [
           {
             "OperatorBearer": []
+          },
+          {
+            "WebSession": []
           }
         ],
         "summary": "Read the authenticated operator",
@@ -3947,8 +3995,24 @@
     },
     "/auth/v1/sessions": {
       "post": {
-        "description": "Returns an opaque web bearer session valid for eight hours. Accounts are created with the administrative CLI, not public registration. Incorrect, unknown and disabled accounts receive the same error.",
+        "description": "Returns an opaque web bearer session valid for eight hours and sets an HttpOnly SameSite=Strict browser cookie. Accounts are created with the administrative CLI, not public registration. Incorrect, unknown and disabled accounts receive the same error. Requests carrying Origin must include X-MyoControl-Web: 1. Cookie-authenticated mutations require the same custom header; cross-origin CORS access is not enabled.",
         "operationId": "login_auth_v1_sessions_post",
+        "parameters": [
+          {
+            "description": "Required for browser sign-in carrying Origin and for cookie-authenticated mutations. Optional for bearer API clients. The SPA sends this automatically.",
+            "example": "1",
+            "in": "header",
+            "name": "X-MyoControl-Web",
+            "required": false,
+            "schema": {
+              "default": "1",
+              "enum": [
+                "1"
+              ],
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -3984,6 +4048,13 @@
             },
             "description": "Successful Response",
             "headers": {
+              "Set-Cookie": {
+                "description": "HttpOnly SameSite=Strict web session; Secure on HTTPS or when WEB_SESSION_SECURE=true. Logout expires the cookie. Browsers restore it through GET /auth/v1/me.",
+                "example": "myocontrol_web_session=example-only-not-a-valid-session-token; HttpOnly; Max-Age=28800; Path=/; SameSite=strict",
+                "schema": {
+                  "type": "string"
+                }
+              },
               "X-Correlation-ID": {
                 "description": "Request correlation identifier, generated when no valid incoming identifier is supplied.",
                 "example": "tutorial-request-1",
@@ -4013,6 +4084,28 @@
                   "type": "string"
                 }
               },
+              "X-Correlation-ID": {
+                "description": "Request correlation identifier, generated when no valid incoming identifier is supplied.",
+                "example": "tutorial-request-1",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Browser request header required"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Browser request header required",
+            "headers": {
               "X-Correlation-ID": {
                 "description": "Request correlation identifier, generated when no valid incoming identifier is supplied.",
                 "example": "tutorial-request-1",
@@ -4146,12 +4239,35 @@
     },
     "/auth/v1/sessions/current": {
       "delete": {
-        "description": "HTTP 204 has no body. A second request with the revoked token receives 401.",
+        "description": "HTTP 204 has no body. Revokes the session and expires the browser cookie. Cookie authentication requires X-MyoControl-Web: 1. A second request with the revoked token receives 401. Cookie-authenticated mutations additionally require X-MyoControl-Web: 1. Bearer clients do not require that header.",
         "operationId": "logout_auth_v1_sessions_current_delete",
+        "parameters": [
+          {
+            "description": "Required for browser sign-in carrying Origin and for cookie-authenticated mutations. Optional for bearer API clients. The SPA sends this automatically.",
+            "example": "1",
+            "in": "header",
+            "name": "X-MyoControl-Web",
+            "required": false,
+            "schema": {
+              "default": "1",
+              "enum": [
+                "1"
+              ],
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "204": {
             "description": "Revoked successfully; no response body.",
             "headers": {
+              "Set-Cookie": {
+                "description": "HttpOnly SameSite=Strict web session; Secure on HTTPS or when WEB_SESSION_SECURE=true. Logout expires the cookie. Browsers restore it through GET /auth/v1/me.",
+                "example": "myocontrol_web_session=; HttpOnly; Max-Age=0; Path=/; SameSite=strict",
+                "schema": {
+                  "type": "string"
+                }
+              },
               "X-Correlation-ID": {
                 "description": "Request correlation identifier, generated when no valid incoming identifier is supplied.",
                 "example": "tutorial-request-1",
@@ -4181,6 +4297,28 @@
                   "type": "string"
                 }
               },
+              "X-Correlation-ID": {
+                "description": "Request correlation identifier, generated when no valid incoming identifier is supplied.",
+                "example": "tutorial-request-1",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Browser request header required"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Browser request header required",
+            "headers": {
               "X-Correlation-ID": {
                 "description": "Request correlation identifier, generated when no valid incoming identifier is supplied.",
                 "example": "tutorial-request-1",
@@ -4267,6 +4405,9 @@
         "security": [
           {
             "OperatorBearer": []
+          },
+          {
+            "WebSession": []
           }
         ],
         "summary": "Revoke the current session",
@@ -4565,6 +4706,9 @@
         "security": [
           {
             "OperatorBearer": []
+          },
+          {
+            "WebSession": []
           }
         ],
         "summary": "List your models",
@@ -4844,6 +4988,9 @@
         "security": [
           {
             "OperatorBearer": []
+          },
+          {
+            "WebSession": []
           }
         ],
         "summary": "Read your models",
@@ -5124,6 +5271,9 @@
         "security": [
           {
             "OperatorBearer": []
+          },
+          {
+            "WebSession": []
           }
         ],
         "summary": "List your published recording parts",
@@ -5132,8 +5282,24 @@
         ]
       },
       "post": {
-        "description": "Bearer-authenticated desktop synchronization. The gateway derives operator and client identity from the access session and replaces incoming identity headers. Publishing requires a desktop session and a non-reviewer operator. Samples retain their actual channel count and original half-open coordinates; same identity with different content returns 409.",
+        "description": "Bearer-authenticated desktop synchronization. The gateway derives operator and client identity from the access session and replaces incoming identity headers. Publishing requires a desktop session and a non-reviewer operator. Samples retain their actual channel count and original half-open coordinates; same identity with different content returns 409. Cookie-authenticated mutations additionally require X-MyoControl-Web: 1. Bearer clients do not require that header.",
         "operationId": "publish_cloud_v1_recordings_post",
+        "parameters": [
+          {
+            "description": "Required for browser sign-in carrying Origin and for cookie-authenticated mutations. Optional for bearer API clients. The SPA sends this automatically.",
+            "example": "1",
+            "in": "header",
+            "name": "X-MyoControl-Web",
+            "required": false,
+            "schema": {
+              "default": "1",
+              "enum": [
+                "1"
+              ],
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -5463,6 +5629,9 @@
         "security": [
           {
             "OperatorBearer": []
+          },
+          {
+            "WebSession": []
           }
         ],
         "summary": "Publish a local recording part",
@@ -5749,6 +5918,9 @@
         "security": [
           {
             "OperatorBearer": []
+          },
+          {
+            "WebSession": []
           }
         ],
         "summary": "Download your published signal",
@@ -6048,6 +6220,9 @@
         "security": [
           {
             "OperatorBearer": []
+          },
+          {
+            "WebSession": []
           }
         ],
         "summary": "List your results",
@@ -6350,6 +6525,9 @@
         "security": [
           {
             "OperatorBearer": []
+          },
+          {
+            "WebSession": []
           }
         ],
         "summary": "Read your results",
@@ -6655,6 +6833,9 @@
         "security": [
           {
             "OperatorBearer": []
+          },
+          {
+            "WebSession": []
           }
         ],
         "summary": "List your runs",
@@ -6941,6 +7122,9 @@
         "security": [
           {
             "OperatorBearer": []
+          },
+          {
+            "WebSession": []
           }
         ],
         "summary": "Read your runs",

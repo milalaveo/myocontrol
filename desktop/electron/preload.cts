@@ -21,4 +21,12 @@ contextBridge.exposeInMainWorld('myocontrol', {
   selectSensor: (value: { address: string; label: string }) =>
     ipcRenderer.invoke('sensor:select', value),
   openBluetoothSettings: () => ipcRenderer.invoke('sensor:bluetooth-settings'),
+  updateStatus: () => ipcRenderer.invoke('updates:status'),
+  checkUpdates: () => ipcRenderer.invoke('updates:check'),
+  installUpdate: () => ipcRenderer.invoke('updates:install'),
+  subscribeUpdates: (callback: (status: unknown) => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, status: unknown) => callback(status)
+    ipcRenderer.on('updates:status', listener)
+    return () => ipcRenderer.removeListener('updates:status', listener)
+  },
 })

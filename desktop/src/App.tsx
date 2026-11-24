@@ -16,6 +16,7 @@ import {
 } from '@carbon/react'
 import { Cloud, DataBase, Play, Recording as RecordingIcon, Stop } from '@carbon/icons-react'
 import SignalChart from './components/SignalChart'
+import UpdatePanel from './components/UpdatePanel'
 import SensorPicker from './components/SensorPicker'
 import PersonalCalibration from './components/PersonalCalibration'
 import type { Identity, Library, Signal, Status, SyncStatus } from './types'
@@ -139,6 +140,7 @@ export default function App() {
             {status ? 'Runtime connected' : 'Runtime unavailable'}
           </Tag>
           <p>Capture and recognition run on this computer.</p>
+          <UpdatePanel active={active || busy} />
         </div>
       </aside>
       <main>

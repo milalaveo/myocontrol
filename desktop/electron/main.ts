@@ -2,6 +2,7 @@ import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { RuntimeManager } from './runtime-manager.js'
+import { createUpdates } from './updates.js'
 import { readSensorSelection, saveSensorSelection } from './sensor-selection.js'
 import {
   clearCredentials,
@@ -25,10 +26,12 @@ const runtime = new RuntimeManager()
 let window: BrowserWindow | null = null
 let credentials: Credentials | null = null
 let quitting = false
+let installingUpdate = false
+let stoppedForUpdate = false
 let devRestartPending = false
 let devRestartChecking = false
 function restartDevelopmentWhenIdle() {
-  if (!devRestartPending || devRestartChecking || quitting) return
+  if (!devRestartPending || devRestartChecking || installingUpdate || quitting) return
   devRestartChecking = true
   void runtime
     .call('status')
@@ -56,6 +59,42 @@ if (!app.isPackaged && process.env.MYOCONTROL_DEV === '1' && process.send) {
   })
   process.on('disconnect', () => app.quit())
 }
+const updates = createUpdates({
+  prepareInstall: async () => {
+    installingUpdate = true
+    const status = (await runtime.call('status')) as { state: string }
+    if (!['idle', 'failed'].includes(status.state))
+      throw new Error('Stop capture, calibration or replay before installing an update')
+  },
+  stopRuntime: async () => {
+    await runtime.stop()
+    stoppedForUpdate = true
+    quitting = true
+  },
+  cancelInstall: () => {
+    installingUpdate = false
+    quitting = false
+    if (stoppedForUpdate) {
+      stoppedForUpdate = false
+      void runtime
+        .start()
+        .then(async () => {
+          if (credentials) await runtime.call('cloud_restore', { credentials })
+        })
+        .catch(() => {})
+    }
+  },
+  notify: (status) => {
+    if (window && !window.isDestroyed() && !window.webContents.isDestroyed())
+      window.webContents.send('updates:status', status)
+  },
+})
+
+function callRuntime(method: string, params: Record<string, unknown> = {}) {
+  if (installingUpdate) throw new Error('The app is restarting to install an update')
+  return runtime.call(method, params)
+}
+
 runtime.on('runtime-event', (event) => {
   if (event.event === 'status') restartDevelopmentWhenIdle()
   if (event.event === 'cloud' && event.data.state === 'auth_required') {
@@ -67,6 +106,7 @@ runtime.on('runtime-event', (event) => {
 })
 
 function trusted(event: Electron.IpcMainInvokeEvent) {
+  if (installingUpdate) throw new Error('The app is restarting to install an update')
   if (
     !window ||
     event.sender !== window.webContents ||
@@ -102,7 +142,7 @@ ipcMain.handle('runtime:request', async (event, method: unknown, params: unknown
     JSON.stringify(params).length > 8192
   )
     throw new Error('Invalid desktop command')
-  return runtime.call(method, params as Record<string, unknown>)
+  return callRuntime(method, params as Record<string, unknown>)
 })
 ipcMain.handle('desktop:import', async (event, participantKey: string) => {
   trusted(event)
@@ -112,7 +152,7 @@ ipcMain.handle('desktop:import', async (event, participantKey: string) => {
   })
   return result.canceled
     ? null
-    : runtime.call('import_recording', {
+    : callRuntime('import_recording', {
         path: result.filePaths[0],
         participant_key: participantKey || 'local-import',
       })
@@ -122,7 +162,7 @@ ipcMain.handle('desktop:demo', async (event) => {
   const fixture = app.isPackaged
     ? path.join(process.resourcesPath, 'fixtures/synthetic-demo.json')
     : path.resolve(directory, '../../local-runtime/fixtures/synthetic-demo.json')
-  return runtime.call('import_recording', { path: fixture, participant_key: 'synthetic-demo' })
+  return callRuntime('import_recording', { path: fixture, participant_key: 'synthetic-demo' })
 })
 ipcMain.handle('desktop:model', async (event) => {
   trusted(event)
@@ -130,7 +170,7 @@ ipcMain.handle('desktop:model', async (event) => {
     properties: ['openFile'],
     filters: [{ name: 'LDA model JSON', extensions: ['json'] }],
   })
-  return result.canceled ? null : runtime.call('load_model', { path: result.filePaths[0] })
+  return result.canceled ? null : callRuntime('load_model', { path: result.filePaths[0] })
 })
 ipcMain.handle('desktop:export', async (event, identifier: unknown) => {
   trusted(event)
@@ -142,14 +182,14 @@ ipcMain.handle('desktop:export', async (event, identifier: unknown) => {
   })
   return result.canceled
     ? null
-    : runtime.call('export_recording', { identifier, destination: result.filePath })
+    : callRuntime('export_recording', { identifier, destination: result.filePath })
 })
 ipcMain.handle('desktop:restart', async (event) => {
   trusted(event)
   await runtime.stop()
   await runtime.start()
-  if (credentials) await runtime.call('cloud_restore', { credentials })
-  return runtime.call('status')
+  if (credentials) await callRuntime('cloud_restore', { credentials })
+  return callRuntime('status')
 })
 ipcMain.handle('sensor:selection', (event) => {
   trusted(event)
@@ -165,6 +205,19 @@ ipcMain.handle('sensor:bluetooth-settings', async (event) => {
   if (process.platform === 'darwin')
     return shell.openExternal('x-apple.systempreferences:com.apple.Bluetooth')
   throw new Error('Open Bluetooth pairing from your operating system settings')
+})
+
+ipcMain.handle('updates:status', (event) => {
+  trusted(event)
+  return updates.snapshot()
+})
+ipcMain.handle('updates:check', (event) => {
+  trusted(event)
+  return updates.check()
+})
+ipcMain.handle('updates:install', (event) => {
+  trusted(event)
+  return updates.install()
 })
 
 ipcMain.handle('cloud:identity', (event) => {
@@ -183,13 +236,13 @@ ipcMain.handle('cloud:login', async (event, body: unknown) => {
   )
     throw new Error('Enter the cloud URL, email and password')
   if (credentials) throw new Error('Sign out before switching operator accounts')
-  credentials = (await runtime.call('cloud_login', value)) as Credentials
+  credentials = (await callRuntime('cloud_login', value)) as Credentials
   const persisted = await saveCredentials(credentials)
   return publicIdentity(credentials, persisted)
 })
 ipcMain.handle('cloud:logout', async (event) => {
   trusted(event)
-  await runtime.call('cloud_logout')
+  await callRuntime('cloud_logout')
   credentials = null
   await clearCredentials()
   return publicIdentity(null)
@@ -220,7 +273,7 @@ async function launch() {
   try {
     await runtime.start()
     restartDevelopmentWhenIdle()
-    if (credentials) await runtime.call('cloud_restore', { credentials })
+    if (credentials) await callRuntime('cloud_restore', { credentials })
   } catch {
     credentials = null
   }

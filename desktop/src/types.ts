@@ -10,6 +10,7 @@ export type CalibrationAssessment = {
   test_windows: number
   scope: string
 }
+export type UpdateStatus = import('../electron/update-controller.js').UpdateStatus
 export type Metadata = {
   sample_rate_hz: number
   channel_map: number[]
@@ -99,6 +100,10 @@ declare global {
       sensorSelection(): Promise<{ address: string; label: string } | null>
       selectSensor(value: { address: string; label: string }): Promise<void>
       openBluetoothSettings(): Promise<void>
+      updateStatus(): Promise<UpdateStatus>
+      checkUpdates(): Promise<UpdateStatus>
+      installUpdate(): Promise<UpdateStatus>
+      subscribeUpdates(callback: (status: UpdateStatus) => void): () => void
     }
   }
 }

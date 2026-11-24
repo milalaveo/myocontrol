@@ -17,10 +17,14 @@
     "start": "electron .",
     "test:e2e": "playwright test",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "test:updates": "npm run build:main && node --test tests/updates.test.mjs"
   },
   "devDependencies": {
+    "@carbon/icons-react": "^11.92.0",
+    "@carbon/react": "^1.121.0",
     "@playwright/test": "^1.65.1",
+    "@react-three/fiber": "^9.5.0",
     "@types/node": "^24.19.2",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
@@ -29,16 +33,13 @@
     "electron": "^45.4.1",
     "electron-builder": "^26.18.0",
     "prettier": "^3.10.1",
-    "sass": "^1.108.2",
-    "typescript": "^5.9.3",
-    "vite": "^7.3.0",
-    "@carbon/icons-react": "^11.92.0",
-    "@carbon/react": "^1.121.0",
-    "@react-three/fiber": "^9.5.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
+    "sass": "^1.108.2",
     "three": "^0.183.0",
-    "uplot": "^1.6.32"
+    "typescript": "^5.9.3",
+    "uplot": "^1.6.32",
+    "vite": "^7.3.0"
   },
   "build": {
     "appId": "org.myocontrol.desktop",
@@ -73,12 +74,17 @@
       "target": [
         "nsis"
       ],
-      "artifactName": "MyoControl-${version}-${arch}-setup.${ext}"
+      "artifactName": "MyoControl-${version}-${arch}-setup.${ext}",
+      "publish": {
+        "provider": "generic",
+        "url": "https://github.com/milalaveo/myocontrol/releases/latest/download/"
+      }
     },
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
-      "perMachine": false
+      "perMachine": false,
+      "include": "installer.nsh"
     },
     "mac": {
       "target": [
@@ -95,6 +101,10 @@
         "AppImage"
       ],
       "category": "Education"
-    }
+    },
+    "publish": null
+  },
+  "dependencies": {
+    "electron-updater": "6.8.12"
   }
 }

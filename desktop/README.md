@@ -70,6 +70,18 @@ Windows packages are unsigned; macOS packages are unsigned and not notarized, wi
 
 Cloud URL is the API base, which may include `/api`, rather than the static website root. No deployment domain is built into the application. The update subsystem writes a bounded diagnostic log; general runtime/cloud file logging remains unimplemented.
 
+## Windows application updates
+
+The installed Windows NSIS application checks the public GitHub release feed after startup and every 30 minutes. It downloads a newer package in the background and shows **Restart and update**. Installation is explicit and requires the real runtime to be idle/failed; capture, calibration recording, paused/running replay and new actions cannot race the installation. The runtime is shut down before the installer runs. Closing the app normally does not silently install an update. Local recordings, encrypted credentials and the selected sensor remain in the existing user profile, outside the replaced application directory.
+
+This feature is enabled only after an NSIS installation creates its installation marker. ZIP/unpacked, development, test and macOS builds do not attempt NSIS updates. The first updater-enabled release must be installed manually; earlier versions cannot update themselves. macOS auto-update/signing and a ZIP replacement launcher are not implemented.
+
+CI assigns technical version `0.2.<GITHUB_RUN_NUMBER>` automatically before packaging, while filenames and release tags still use commit SHA. Windows publishes `latest.yml` and installer `.blockmap` alongside the setup executable. The generic feed uses the public GitHub release URL, not the deployment server or operator credentials. `latest.yml` is shared only by Windows x64; no conflicting macOS architecture metadata is published. The release is marked latest after the complete platform matrix succeeds. Manual and PR builds do not publish a release.
+
+Updater errors leave the current app installed; no downgrade is allowed. Update events and sanitized error codes are written to `logs/updates.log` under the app's user-data directory (1 MiB rotation plus one previous file). Passwords, tokens, arbitrary exception bodies and research signals are not logged. Current Windows packages remain unsigned; download checksums come from the HTTPS update manifest, and no Authenticode publisher identity is configured. Distribution signing remains separate work.
+
+Run `npm run test:updates` for restart/download/error regression checks. Sensor discovery and SDK tests are in `local-runtime/tests`; automated UI tests use controlled discovery results and do not pair or acquire from hardware. Successful simulated tests do not establish a real device connection.
+
 Imported models are copied into the runtime profile and validated again on each launch. The original filename and model checksum are retained; moving or deleting the source file does not affect the saved model. **Clear model** removes the persistent selection. A failed import keeps the previous model, and an unreadable saved copy leaves acquisition available with an explanatory recognition status.
 
 Local LDA inference supports two-channel (`time-domain-2ch-v1`) and four-channel (`time-domain-4ch-v1`) models. The loaded model shows its channel count and sample rate. Use a separately trained two-channel model for A1/A2; a four-channel model remains incompatible with two-channel recordings. This runtime does not train models or verify their recognition accuracy.

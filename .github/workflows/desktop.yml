@@ -63,6 +63,7 @@ jobs:
           & $python -m unittest discover -s ../local-runtime/tests -v
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - run: npm run format:check
+      - run: npm run test:updates
       - run: npm run build
       - run: npm run test:e2e
       - run: npm run build:runtime
@@ -71,6 +72,8 @@ jobs:
           $buildId = $env:GITHUB_SHA.Substring(0, 12)
           "MYOCONTROL_BUILD_ID=$buildId" >> $env:GITHUB_ENV
           $package = Get-Content package.json -Raw | ConvertFrom-Json -AsHashtable
+          # Auto-increasing technical version; filenames remain commit-based.
+          $package.version = '0.2.' + $env:GITHUB_RUN_NUMBER
           $package.build.win.artifactName = 'MyoControl-' + $buildId + '-windows-${arch}-setup.${ext}'
           $package.build.mac.artifactName = 'MyoControl-' + $buildId + '-macos-${arch}.${ext}'
           $package | ConvertTo-Json -Depth 20 | Set-Content package.json -Encoding utf8
@@ -92,6 +95,8 @@ jobs:
             desktop/release/*setup.exe
             desktop/release/*.dmg
             desktop/release/*.zip
+            desktop/release/latest.yml
+            desktop/release/*.exe.blockmap
           if-no-files-found: error
           retention-days: 14
       - name: Upload failed test diagnostics
@@ -133,6 +138,6 @@ jobs:
             fi
           else
             gh release create "$tag" release-assets/* \
-              --generate-notes --target "$COMMIT_SHA" \
+              --generate-notes --latest --target "$COMMIT_SHA" \
               --title "MyoControl $build_id"
           fi

@@ -159,6 +159,9 @@ test('sensor selector rescans without fake ports and remembers the explicit choi
     await expect(page.getByText('Runtime connected', { exact: true })).toBeVisible()
     await page.getByRole('button', { name: 'Enter port manually', exact: true }).click()
     await expect(page.getByLabel('Bluetooth serial port or manual address')).toHaveValue('COM254')
+    await expect(page.getByLabel('Application updates')).toContainText(
+      'Automatic updates are available in the installed Windows app.',
+    )
     expect(await page.evaluate(() => Object.keys(localStorage))).toEqual([])
   } finally {
     await application.close()

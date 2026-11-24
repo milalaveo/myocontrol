@@ -1,4 +1,7 @@
-﻿# Cloud access and development gateway
+# Cloud access and development gateway
+
+API reference: [versioned OpenAPI JSON](gateway/openapi.json), [Getting Started and integration tutorials](../api/README.md). The gateway serves the complete client contract at `/docs`, `/redoc` and `/openapi.json`. CI validates stored specifications and all body examples.
+
 
 The gateway owns HTTP access to the `identity` schema. Cloud clients never receive PostgreSQL credentials. General training executes on a local workstation; calibration/live recognition execute inside Electron.
 

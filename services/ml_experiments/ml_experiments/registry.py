@@ -1,22 +1,34 @@
 """Owner-scoped cloud reads. This module never executes training or inference."""
+
 import hmac
 import os
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query
+from fastapi.security import APIKeyHeader
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from .db import get_session
+from .schemas import RegistryRun, PublishedModel, EvaluationDetail, RunPage, ModelPage, ResultPage
 
 router = APIRouter(prefix="/v1/registry", tags=["cloud registry"])
 
 
-def operator(x_cloud_key: str = Header(default=""), x_operator_id: UUID | None = Header(default=None)):
+gateway_key = APIKeyHeader(name="X-Cloud-Key", scheme_name="GatewayKey", auto_error=False)
+
+
+def operator(
+    x_cloud_key: str | None = Depends(gateway_key),
+    x_operator_id: UUID | None = Header(default=None),
+):
     secret = os.environ.get("CLOUD_INTERNAL_KEY", "")
     if len(secret) < 32:
         raise HTTPException(503, "Cloud registry is not configured")
-    if not hmac.compare_digest(secret.encode(), x_cloud_key.encode()) or x_operator_id is None:
+    if (
+        not hmac.compare_digest(secret.encode(), (x_cloud_key or "").encode())
+        or x_operator_id is None
+    ):
         raise HTTPException(401, "Trusted gateway context required")
     return x_operator_id
 
@@ -29,34 +41,65 @@ RUNS = """SELECT id,kind,family,condition,execution_location,manifest_id,manifes
 MODELS = "SELECT * FROM ml_experiments.published_models WHERE operator_id=:operator"
 RESULTS = """SELECT e.* FROM ml_experiments.reviewer_results e JOIN ml_experiments.experiment_runs r ON r.id=e.run_id
     WHERE r.operator_id=:operator"""
-QUERIES = {"runs": (RUNS, "created_at DESC,id DESC", "id"),
-           "models": (MODELS, "published_at DESC,id DESC", "id"),
-           "results": (RESULTS, "e.id DESC", "e.id")}
+QUERIES = {
+    "runs": (RUNS, "created_at DESC,id DESC", "id"),
+    "models": (MODELS, "published_at DESC,id DESC", "id"),
+    "results": (RESULTS, "e.id DESC", "e.id"),
+}
 
 
-@router.get("/{collection}")
-def listing(collection: str, limit: int = Query(default=50, ge=1, le=100), offset: int = Query(default=0, ge=0),
-            actor: UUID = Depends(operator), session: Session = Depends(get_session)):
+@router.get("/{collection}", response_model=RunPage | ModelPage | ResultPage)
+def listing(
+    collection: str,
+    limit: int = Query(default=50, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
+    actor: UUID = Depends(operator),
+    session: Session = Depends(get_session),
+):
     if collection not in QUERIES:
         raise HTTPException(404, "Collection not found")
     sql, order, _ = QUERIES[collection]
-    rows = list(session.execute(text(f"{sql} ORDER BY {order} LIMIT :limit OFFSET :offset"),
-                {"operator": actor, "limit": limit + 1, "offset": offset}).mappings())
-    return {"items": [dict(row) for row in rows[:limit]],
-            "next_offset": offset + limit if len(rows) > limit else None}
+    rows = list(
+        session.execute(
+            text(f"{sql} ORDER BY {order} LIMIT :limit OFFSET :offset"),
+            {"operator": actor, "limit": limit + 1, "offset": offset},
+        ).mappings()
+    )
+    return {
+        "items": [dict(row) for row in rows[:limit]],
+        "next_offset": offset + limit if len(rows) > limit else None,
+    }
 
 
-@router.get("/{collection}/{item_id}")
-def detail(collection: str, item_id: UUID, actor: UUID = Depends(operator), session: Session = Depends(get_session)):
+@router.get(
+    "/{collection}/{item_id}", response_model=RegistryRun | PublishedModel | EvaluationDetail
+)
+def detail(
+    collection: str,
+    item_id: UUID,
+    actor: UUID = Depends(operator),
+    session: Session = Depends(get_session),
+):
     if collection not in QUERIES:
         raise HTTPException(404, "Collection not found")
     sql, _, key = QUERIES[collection]
-    row = session.execute(text(f"{sql} AND {key}=:id"), {"operator": actor, "id": item_id}).mappings().one_or_none()
+    row = (
+        session.execute(text(f"{sql} AND {key}=:id"), {"operator": actor, "id": item_id})
+        .mappings()
+        .one_or_none()
+    )
     if row is None:
         raise HTTPException(404, "Registry item not found")
     result = dict(row)
     if collection == "results":
-        result["confusion_counts"] = [dict(item) for item in session.execute(text("""SELECT actual_class,predicted_class,count
-            FROM ml_experiments.confusion_counts WHERE evaluation_id=:id ORDER BY actual_class,predicted_class"""),
-            {"id": item_id}).mappings()]
+        result["confusion_counts"] = [
+            dict(item)
+            for item in session.execute(
+                text(
+                    """SELECT actual_class,predicted_class,count
+            FROM ml_experiments.confusion_counts WHERE evaluation_id=:id ORDER BY actual_class,predicted_class"""
+                ),
+                {"id": item_id},
+            ).mappings()
+        ]
     return result

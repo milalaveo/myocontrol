@@ -1,4 +1,6 @@
-"""Local gateway with standard HTTP Basic authentication and rate limiting."""
+"""HTTP gateway for operator access and private development services."""
+
+from pathlib import Path
 
 import hmac
 import ipaddress
@@ -18,6 +20,7 @@ from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from prometheus_client import Counter, Histogram, make_asgi_app
 from sqlalchemy.exc import SQLAlchemyError
 
+from .schemas import HealthResponse
 from .identity import router as identity_router
 from .cloud import router as cloud_router
 
@@ -33,7 +36,11 @@ logger = logging.getLogger("gateway")
 logger.setLevel(logging.INFO)
 lock = threading.Lock()
 requests_by_client = {}
-SERVICES = {"data": "DATA_SERVICE_URL", "experiments": "ML_SERVICE_URL", "recognition": "RECOGNITION_SERVICE_URL"}
+SERVICES = {
+    "data": "DATA_SERVICE_URL",
+    "experiments": "ML_SERVICE_URL",
+    "recognition": "RECOGNITION_SERVICE_URL",
+}
 
 
 @app.exception_handler(SQLAlchemyError)
@@ -53,10 +60,15 @@ async def correlation_id(request: Request, call_next):
             enforce_rate_limit(client_address(request))
         response = await call_next(request)
     except HTTPException as error:
-        response = JSONResponse(status_code=error.status_code, content={"detail": error.detail}, headers=error.headers)
+        response = JSONResponse(
+            status_code=error.status_code, content={"detail": error.detail}, headers=error.headers
+        )
     except Exception:
         logger.exception("unhandled_error correlation_id=%s", correlation)
-        response = JSONResponse(status_code=500, content={"detail": "Internal server error", "correlation_id": correlation})
+        response = JSONResponse(
+            status_code=500,
+            content={"detail": "Internal server error", "correlation_id": correlation},
+        )
     response.headers["X-Correlation-ID"] = correlation
     if request.url.path.startswith(("/auth/", "/cloud/")):
         response.headers["Cache-Control"] = "no-store"
@@ -64,9 +76,19 @@ async def correlation_id(request: Request, call_next):
     elapsed = time.perf_counter() - started
     REQUESTS.labels(request.method, route, str(response.status_code)).inc()
     LATENCY.labels(request.method, route).observe(elapsed)
-    logger.info(json.dumps({"event": "http_request", "service": "gateway", "correlation_id": correlation,
-                            "method": request.method, "path": request.url.path, "status": response.status_code,
-                            "duration_ms": round(elapsed * 1000, 3)}))
+    logger.info(
+        json.dumps(
+            {
+                "event": "http_request",
+                "service": "gateway",
+                "correlation_id": correlation,
+                "method": request.method,
+                "path": request.url.path,
+                "status": response.status_code,
+                "duration_ms": round(elapsed * 1000, 3),
+            }
+        )
+    )
     return response
 
 
@@ -74,9 +96,13 @@ def authenticate(credentials: HTTPBasicCredentials = Depends(security)):
     username, password = os.environ.get("GATEWAY_USERNAME"), os.environ.get("GATEWAY_PASSWORD")
     if not username or not password:
         raise HTTPException(status_code=503, detail="Gateway credentials are not configured")
-    if not (hmac.compare_digest(credentials.username.encode("utf-8"), username.encode("utf-8")) and
-            hmac.compare_digest(credentials.password.encode("utf-8"), password.encode("utf-8"))):
-        raise HTTPException(status_code=401, detail="Invalid credentials", headers={"WWW-Authenticate": "Basic"})
+    if not (
+        hmac.compare_digest(credentials.username.encode("utf-8"), username.encode("utf-8"))
+        and hmac.compare_digest(credentials.password.encode("utf-8"), password.encode("utf-8"))
+    ):
+        raise HTTPException(
+            status_code=401, detail="Invalid credentials", headers={"WWW-Authenticate": "Basic"}
+        )
     return username
 
 
@@ -94,7 +120,11 @@ def enforce_rate_limit(client):
                 del requests_by_client[key]
         start, count = requests_by_client.get(client, (now, 0))
         if count >= limit:
-            raise HTTPException(status_code=429, detail="Rate limit exceeded", headers={"Retry-After": str(max(1, int(60 - (now - start))))})
+            raise HTTPException(
+                status_code=429,
+                detail="Rate limit exceeded",
+                headers={"Retry-After": str(max(1, int(60 - (now - start))))},
+            )
         requests_by_client[client] = (start, count + 1)
 
 
@@ -110,7 +140,7 @@ def client_address(request: Request):
     return address
 
 
-@app.get("/health/live")
+@app.get("/health/live", response_model=HealthResponse)
 def live():
     return {"status": "live"}
 
@@ -122,11 +152,19 @@ def service_docs(service: str, username: str = Depends(authenticate)):
     return get_swagger_ui_html(openapi_url=f"/{service}/openapi.json", title=f"{service} API")
 
 
-@app.api_route("/{service}/{path:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE"])
+@app.api_route(
+    "/{service}/{path:path}",
+    methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
+    include_in_schema=False,
+)
 async def proxy(service: str, path: str, request: Request, username: str = Depends(authenticate)):
     if path == "v1/registry" or path.startswith("v1/registry/"):
         raise HTTPException(status_code=403, detail="Use operator-authenticated cloud routes")
-    if service not in SERVICES or not (path.startswith("v1/") or path in {"health/live", "health/ready", "openapi.json"}) or ".." in path.split("/"):
+    if (
+        service not in SERVICES
+        or not (path.startswith("v1/") or path in {"health/live", "health/ready", "openapi.json"})
+        or ".." in path.split("/")
+    ):
         raise HTTPException(status_code=404, detail="Route not found")
     address = os.environ.get(SERVICES[service])
     if not address:
@@ -141,15 +179,28 @@ async def proxy(service: str, path: str, request: Request, username: str = Depen
     if "idempotency-key" in request.headers:
         headers["Idempotency-Key"] = request.headers["idempotency-key"]
     try:
-        async with httpx.AsyncClient(timeout=httpx.Timeout(30.0, connect=2.0), follow_redirects=False) as client:
-            response = await client.request(request.method, f"{address.rstrip('/')}/{path}", params=request.query_params,
-                                            content=payload, headers=headers)
+        async with httpx.AsyncClient(
+            timeout=httpx.Timeout(30.0, connect=2.0), follow_redirects=False
+        ) as client:
+            response = await client.request(
+                request.method,
+                f"{address.rstrip('/')}/{path}",
+                params=request.query_params,
+                content=payload,
+                headers=headers,
+            )
     except httpx.TimeoutException as error:
-        raise HTTPException(status_code=504, detail="Service request timed out", headers={"X-Correlation-ID": correlation}) from error
+        raise HTTPException(
+            status_code=504,
+            detail="Service request timed out",
+            headers={"X-Correlation-ID": correlation},
+        ) from error
     except httpx.HTTPError as error:
-        raise HTTPException(status_code=502, detail="Service unavailable", headers={"X-Correlation-ID": correlation}) from error
+        raise HTTPException(
+            status_code=502, detail="Service unavailable", headers={"X-Correlation-ID": correlation}
+        ) from error
     response_headers = {"X-Correlation-ID": correlation}
-    for name in ("content-type", "retry-after", "www-authenticate"):
+    for name in ("content-type", "retry-after", "www-authenticate", "x-artifact-sha256"):
         if name in response.headers:
             response_headers[name] = response.headers[name]
     location = response.headers.get("location", "")
@@ -164,3 +215,14 @@ async def proxy(service: str, path: str, request: Request, username: str = Depen
         except (ValueError, TypeError, AttributeError) as error:
             raise HTTPException(status_code=502, detail="Invalid service API document") from error
     return Response(content=content, status_code=response.status_code, headers=response_headers)
+
+
+def published_openapi():
+    if app.openapi_schema is None:
+        app.openapi_schema = json.loads(
+            Path(__file__).with_name("openapi.json").read_text(encoding="utf-8")
+        )
+    return app.openapi_schema
+
+
+app.openapi = published_openapi

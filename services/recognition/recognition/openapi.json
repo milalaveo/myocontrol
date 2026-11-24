@@ -1,0 +1,941 @@
+{
+  "components": {
+    "schemas": {
+      "ApiError": {
+        "properties": {
+          "correlation_id": {
+            "type": "string"
+          },
+          "detail": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "detail"
+        ],
+        "type": "object"
+      },
+      "AvailableModel": {
+        "properties": {
+          "manifest_id": {
+            "format": "uuid",
+            "title": "Manifest Id",
+            "type": "string"
+          },
+          "model_run_id": {
+            "format": "uuid",
+            "title": "Model Run Id",
+            "type": "string"
+          },
+          "received_at": {
+            "format": "date-time",
+            "title": "Received At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "model_run_id",
+          "manifest_id",
+          "received_at"
+        ],
+        "title": "AvailableModel",
+        "type": "object"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "HealthResponse": {
+        "properties": {
+          "status": {
+            "enum": [
+              "live",
+              "ready"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "HealthResponse",
+        "type": "object"
+      },
+      "Prediction": {
+        "properties": {
+          "command": {
+            "title": "Command",
+            "type": "string"
+          },
+          "gesture": {
+            "title": "Gesture",
+            "type": "string"
+          },
+          "start_sample": {
+            "title": "Start Sample",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "start_sample",
+          "gesture",
+          "command"
+        ],
+        "title": "Prediction",
+        "type": "object"
+      },
+      "ReplayCreate": {
+        "properties": {
+          "model_run_id": {
+            "format": "uuid",
+            "title": "Model Run Id",
+            "type": "string"
+          },
+          "recording_id": {
+            "format": "uuid",
+            "title": "Recording Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "model_run_id",
+          "recording_id"
+        ],
+        "title": "ReplayCreate",
+        "type": "object"
+      },
+      "ReplayFailure": {
+        "properties": {
+          "command": {
+            "const": "neutral",
+            "title": "Command",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "command",
+          "reason"
+        ],
+        "title": "ReplayFailure",
+        "type": "object"
+      },
+      "ReplayResponse": {
+        "properties": {
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "model_checksum": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Checksum"
+          },
+          "model_run_id": {
+            "format": "uuid",
+            "title": "Model Run Id",
+            "type": "string"
+          },
+          "recording_id": {
+            "format": "uuid",
+            "title": "Recording Id",
+            "type": "string"
+          },
+          "result": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReplayResult"
+              },
+              {
+                "$ref": "#/components/schemas/ReplayFailure"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Result"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "model_run_id",
+          "recording_id",
+          "id",
+          "status",
+          "model_checksum",
+          "result",
+          "error"
+        ],
+        "title": "ReplayResponse",
+        "type": "object"
+      },
+      "ReplayResult": {
+        "properties": {
+          "feature_version": {
+            "title": "Feature Version",
+            "type": "string"
+          },
+          "prediction_count": {
+            "title": "Prediction Count",
+            "type": "integer"
+          },
+          "predictions": {
+            "items": {
+              "$ref": "#/components/schemas/Prediction"
+            },
+            "title": "Predictions",
+            "type": "array"
+          },
+          "processing_p95_ms": {
+            "title": "Processing P95 Ms",
+            "type": "number"
+          },
+          "timing_scope": {
+            "title": "Timing Scope",
+            "type": "string"
+          }
+        },
+        "required": [
+          "feature_version",
+          "predictions",
+          "prediction_count",
+          "processing_p95_ms",
+          "timing_scope"
+        ],
+        "title": "ReplayResult",
+        "type": "object"
+      },
+      "ValidationError": {
+        "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "contact": {
+      "name": "MyoControl repository",
+      "url": "https://github.com/milalaveo/myocontrol"
+    },
+    "description": "Implemented MyoControl API. Cloud registries are read-only. General training belongs to a local workstation; live acquisition/calibration belongs to Electron. Legacy Data/ML/replay operations are private single-host development APIs. Examples are synthetic; passwords/tokens/UUIDs/digests shown here are not live credentials or measured results.",
+    "title": "Recognition API",
+    "version": "0.1.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/health/live": {
+      "get": {
+        "description": "Liveness does not require database access.",
+        "operationId": "live_health_live_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "status": "live"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            },
+            "description": "Successful Response",
+            "headers": {
+              "X-Correlation-ID": {
+                "description": "Request correlation identifier, generated when no valid incoming identifier is supplied.",
+                "example": "tutorial-request-1",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Internal server error"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Internal server error",
+            "headers": {
+              "X-Correlation-ID": {
+                "description": "Request correlation identifier, generated when no valid incoming identifier is supplied.",
+                "example": "tutorial-request-1",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Check process liveness",
+        "tags": [
+          "health"
+        ]
+      }
+    },
+    "/health/ready": {
+      "get": {
+        "description": "Executes a read-only database query. A successful liveness response alone does not prove readiness.",
+        "operationId": "ready_health_ready_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "status": "ready"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            },
+            "description": "Successful Response",
+            "headers": {
+              "X-Correlation-ID": {
+                "description": "Request correlation identifier, generated when no valid incoming identifier is supplied.",
+                "example": "tutorial-request-1",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Internal server error"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Internal server error",
+            "headers": {
+              "X-Correlation-ID": {
+                "description": "Request correlation identifier, generated when no valid incoming identifier is supplied.",
+                "example": "tutorial-request-1",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Database operation failed"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Database operation failed",
+            "headers": {
+              "X-Correlation-ID": {
+                "description": "Request correlation identifier, generated when no valid incoming identifier is supplied.",
+                "example": "tutorial-request-1",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Check database readiness",
+        "tags": [
+          "health"
+        ]
+      }
+    },
+    "/metrics/": {
+      "get": {
+        "description": "Operational text endpoint. No account or research record payloads. Domain-service metrics stay on the private service network.",
+        "operationId": "recognition_metrics",
+        "responses": {
+          "200": {
+            "content": {
+              "text/plain": {
+                "example": "# HELP process_cpu_seconds_total Total user and system CPU time spent in seconds.\n# TYPE process_cpu_seconds_total counter\nprocess_cpu_seconds_total 0.1\n",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Prometheus exposition format; metric values vary."
+          }
+        },
+        "summary": "Read Prometheus metrics",
+        "tags": [
+          "operations"
+        ]
+      }
+    },
+    "/v1/available-models/{model_run_id}": {
+      "get": {
+        "description": "Confirms that Recognition consumed ModelPublished. It is not an artifact download or model-quality approval.",
+        "operationId": "available_model_v1_available_models__model_run_id__get",
+        "parameters": [
+          {
+            "example": "00000000-0000-4000-8000-000000000018",
+            "in": "path",
+            "name": "model_run_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Model Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "manifest_id": "00000000-0000-4000-8000-000000000004",
+                  "model_run_id": "00000000-0000-4000-8000-000000000018",
+                  "received_at": "2026-11-24T10:00:00Z"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/AvailableModel"
+                }
+              }
+            },
+            "description": "Successful Response",
+            "headers": {
+              "X-Correlation-ID": {
+                "description": "Request correlation identifier, generated when no valid incoming identifier is supplied.",
+                "example": "tutorial-request-1",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Model event not received"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Model event not received",
+            "headers": {
+              "X-Correlation-ID": {
+                "description": "Request correlation identifier, generated when no valid incoming identifier is supplied.",
+                "example": "tutorial-request-1",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "validation": {
+                    "value": {
+                      "detail": [
+                        {
+                          "loc": [
+                            "path",
+                            "model_run_id"
+                          ],
+                          "msg": "Input should be a valid UUID",
+                          "type": "uuid_parsing"
+                        }
+                      ]
+                    }
+                  }
+                },
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/HTTPValidationError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ApiError"
+                    }
+                  ]
+                }
+              }
+            },
+            "description": "Input validation failed. Framework validation uses a detail array; explicit application validation can return a detail string.",
+            "headers": {
+              "X-Correlation-ID": {
+                "description": "Request correlation identifier, generated when no valid incoming identifier is supplied.",
+                "example": "tutorial-request-1",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Internal server error"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Internal server error",
+            "headers": {
+              "X-Correlation-ID": {
+                "description": "Request correlation identifier, generated when no valid incoming identifier is supplied.",
+                "example": "tutorial-request-1",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Database operation failed"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Database operation failed",
+            "headers": {
+              "X-Correlation-ID": {
+                "description": "Request correlation identifier, generated when no valid incoming identifier is supplied.",
+                "example": "tutorial-request-1",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Read model-event receipt",
+        "tags": [
+          "recognition"
+        ]
+      }
+    },
+    "/v1/replay-sessions": {
+      "post": {
+        "description": "Synchronous legacy replay, not live SDK acquisition. HTTP 201 persists either succeeded predictions or a failed session with neutral command; inspect status/error. Processing p95 excludes buffering and rendering.",
+        "operationId": "create_replay_v1_replay_sessions_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "example": {
+                "model_run_id": "00000000-0000-4000-8000-000000000018",
+                "recording_id": "00000000-0000-4000-8000-000000000002"
+              },
+              "schema": {
+                "$ref": "#/components/schemas/ReplayCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": null,
+                  "id": "00000000-0000-4000-8000-000000000019",
+                  "model_checksum": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                  "model_run_id": "00000000-0000-4000-8000-000000000018",
+                  "recording_id": "00000000-0000-4000-8000-000000000002",
+                  "result": {
+                    "feature_version": "time-domain-4ch-v1",
+                    "prediction_count": 1,
+                    "predictions": [
+                      {
+                        "command": "neutral",
+                        "gesture": "rest",
+                        "start_sample": 0
+                      }
+                    ],
+                    "processing_p95_ms": 0.05,
+                    "timing_scope": "feature extraction and prediction only; excludes input buffering and rendering"
+                  },
+                  "status": "succeeded"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ReplayResponse"
+                }
+              }
+            },
+            "description": "Successful Response",
+            "headers": {
+              "X-Correlation-ID": {
+                "description": "Request correlation identifier, generated when no valid incoming identifier is supplied.",
+                "example": "tutorial-request-1",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "validation": {
+                    "value": {
+                      "detail": [
+                        {
+                          "loc": [
+                            "body",
+                            "model_run_id"
+                          ],
+                          "msg": "Field required",
+                          "type": "missing"
+                        }
+                      ]
+                    }
+                  }
+                },
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/HTTPValidationError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ApiError"
+                    }
+                  ]
+                }
+              }
+            },
+            "description": "Input validation failed. Framework validation uses a detail array; explicit application validation can return a detail string.",
+            "headers": {
+              "X-Correlation-ID": {
+                "description": "Request correlation identifier, generated when no valid incoming identifier is supplied.",
+                "example": "tutorial-request-1",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Internal server error"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Internal server error",
+            "headers": {
+              "X-Correlation-ID": {
+                "description": "Request correlation identifier, generated when no valid incoming identifier is supplied.",
+                "example": "tutorial-request-1",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Database operation failed"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Database operation failed",
+            "headers": {
+              "X-Correlation-ID": {
+                "description": "Request correlation identifier, generated when no valid incoming identifier is supplied.",
+                "example": "tutorial-request-1",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Compute a development recording replay",
+        "tags": [
+          "recognition"
+        ]
+      }
+    },
+    "/v1/replay-sessions/{session_id}": {
+      "get": {
+        "description": "Returns persisted predictions or the explicit neutral failure result.",
+        "operationId": "get_replay_v1_replay_sessions__session_id__get",
+        "parameters": [
+          {
+            "example": "00000000-0000-4000-8000-000000000019",
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Session Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": null,
+                  "id": "00000000-0000-4000-8000-000000000019",
+                  "model_checksum": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                  "model_run_id": "00000000-0000-4000-8000-000000000018",
+                  "recording_id": "00000000-0000-4000-8000-000000000002",
+                  "result": {
+                    "feature_version": "time-domain-4ch-v1",
+                    "prediction_count": 1,
+                    "predictions": [
+                      {
+                        "command": "neutral",
+                        "gesture": "rest",
+                        "start_sample": 0
+                      }
+                    ],
+                    "processing_p95_ms": 0.05,
+                    "timing_scope": "feature extraction and prediction only; excludes input buffering and rendering"
+                  },
+                  "status": "succeeded"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ReplayResponse"
+                }
+              }
+            },
+            "description": "Successful Response",
+            "headers": {
+              "X-Correlation-ID": {
+                "description": "Request correlation identifier, generated when no valid incoming identifier is supplied.",
+                "example": "tutorial-request-1",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Replay session not found"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Replay session not found",
+            "headers": {
+              "X-Correlation-ID": {
+                "description": "Request correlation identifier, generated when no valid incoming identifier is supplied.",
+                "example": "tutorial-request-1",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "validation": {
+                    "value": {
+                      "detail": [
+                        {
+                          "loc": [
+                            "path",
+                            "session_id"
+                          ],
+                          "msg": "Input should be a valid UUID",
+                          "type": "uuid_parsing"
+                        }
+                      ]
+                    }
+                  }
+                },
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/HTTPValidationError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ApiError"
+                    }
+                  ]
+                }
+              }
+            },
+            "description": "Input validation failed. Framework validation uses a detail array; explicit application validation can return a detail string.",
+            "headers": {
+              "X-Correlation-ID": {
+                "description": "Request correlation identifier, generated when no valid incoming identifier is supplied.",
+                "example": "tutorial-request-1",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Internal server error"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Internal server error",
+            "headers": {
+              "X-Correlation-ID": {
+                "description": "Request correlation identifier, generated when no valid incoming identifier is supplied.",
+                "example": "tutorial-request-1",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Database operation failed"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Database operation failed",
+            "headers": {
+              "X-Correlation-ID": {
+                "description": "Request correlation identifier, generated when no valid incoming identifier is supplied.",
+                "example": "tutorial-request-1",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Read a replay session",
+        "tags": [
+          "recognition"
+        ]
+      }
+    }
+  },
+  "servers": [
+    {
+      "description": "Local development; domain-service ports are internal in Compose. Use the gateway contract for host access.",
+      "url": "http://127.0.0.1:8003"
+    }
+  ]
+}

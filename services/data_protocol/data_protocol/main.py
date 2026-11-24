@@ -1,5 +1,7 @@
 """HTTP interface for the data and protocol service."""
 
+from pathlib import Path
+
 import logging
 import json
 import re
@@ -17,6 +19,18 @@ from sqlalchemy.orm import Session
 
 from .db import get_session
 from .repository import ParticipantRepository, RecordingRepository, ResearchRepository
+from .schemas import (
+    HealthResponse,
+    ProtocolResponse,
+    SegmentResponse,
+    ManifestResponse,
+    ParticipantAssignmentResponse,
+    UnitResponse,
+    SnapshotResponse,
+    CalibrationResponse,
+    CalibrationItemResponse,
+    CalibrationDetailResponse,
+)
 from .models import SyntheticSplit
 from .storage import read_signal, save_signal
 
@@ -50,7 +64,9 @@ class ParticipantResponse(BaseModel):
 class RecordingCreate(BaseModel):
     participant_id: uuid.UUID
     sample_rate_hz: FiniteFloat = Field(gt=0, le=100000)
-    samples: list[tuple[FiniteFloat, FiniteFloat, FiniteFloat, FiniteFloat]] = Field(min_length=1, max_length=10000)
+    samples: list[tuple[FiniteFloat, FiniteFloat, FiniteFloat, FiniteFloat]] = Field(
+        min_length=1, max_length=10000
+    )
 
 
 class RecordingResponse(BaseModel):
@@ -81,7 +97,11 @@ class ProtocolCreate(BaseModel):
     @field_validator("gesture_codes")
     @classmethod
     def valid_gestures(cls, value):
-        if "rest" not in value or len(set(value)) != len(value) or any(not re.fullmatch(r"[A-Za-z0-9_-]{1,100}", code) for code in value):
+        if (
+            "rest" not in value
+            or len(set(value)) != len(value)
+            or any(not re.fullmatch(r"[A-Za-z0-9_-]{1,100}", code) for code in value)
+        ):
             raise ValueError("Gesture codes must be unique identifiers and include rest")
         return value
 
@@ -132,7 +152,9 @@ def commit_research_operation(session, operation):
         if code == "23503":
             raise HTTPException(status_code=404, detail="Referenced record not found") from error
         if code in {"23505", "23514", "P0001"}:
-            raise HTTPException(status_code=409, detail="Operation conflicts with split constraints") from error
+            raise HTTPException(
+                status_code=409, detail="Operation conflicts with split constraints"
+            ) from error
         raise
 
 
@@ -146,36 +168,59 @@ async def correlation_id(request: Request, call_next):
         response = await call_next(request)
     except Exception:
         logger.exception("unhandled_error correlation_id=%s", correlation)
-        response = JSONResponse(status_code=500, content={"detail": "Internal server error", "correlation_id": correlation})
+        response = JSONResponse(
+            status_code=500,
+            content={"detail": "Internal server error", "correlation_id": correlation},
+        )
     response.headers["X-Correlation-ID"] = correlation
     route = getattr(request.scope.get("route"), "path", "unmatched")
     elapsed = time.perf_counter() - started
     REQUESTS.labels(request.method, route, str(response.status_code)).inc()
     LATENCY.labels(request.method, route).observe(elapsed)
-    logger.info(json.dumps({"event": "http_request", "service": "data_protocol", "correlation_id": correlation,
-                            "method": request.method, "path": request.url.path, "status": response.status_code,
-                            "duration_ms": round(elapsed * 1000, 3)}))
+    logger.info(
+        json.dumps(
+            {
+                "event": "http_request",
+                "service": "data_protocol",
+                "correlation_id": correlation,
+                "method": request.method,
+                "path": request.url.path,
+                "status": response.status_code,
+                "duration_ms": round(elapsed * 1000, 3),
+            }
+        )
+    )
     return response
 
 
 @app.exception_handler(SQLAlchemyError)
 async def database_error(request: Request, exc: SQLAlchemyError):
-    logger.error("database_error correlation_id=%s type=%s", request.state.correlation_id, type(exc).__name__)
-    return JSONResponse(status_code=503, content={"detail": "Database operation failed", "correlation_id": request.state.correlation_id})
+    logger.error(
+        "database_error correlation_id=%s type=%s", request.state.correlation_id, type(exc).__name__
+    )
+    return JSONResponse(
+        status_code=503,
+        content={
+            "detail": "Database operation failed",
+            "correlation_id": request.state.correlation_id,
+        },
+    )
 
 
-@app.get("/health/live", tags=["health"])
+@app.get("/health/live", response_model=HealthResponse, tags=["health"])
 def live():
     return {"status": "live"}
 
 
-@app.get("/health/ready", tags=["health"])
+@app.get("/health/ready", response_model=HealthResponse, tags=["health"])
 def ready(session: Session = Depends(get_session)):
     session.execute(text("SELECT 1 FROM data_protocol.participants LIMIT 1"))
     return {"status": "ready"}
 
 
-@app.post("/v1/participants", response_model=ParticipantResponse, status_code=201, tags=["participants"])
+@app.post(
+    "/v1/participants", response_model=ParticipantResponse, status_code=201, tags=["participants"]
+)
 def create_participant(body: ParticipantCreate, session: Session = Depends(get_session)):
     try:
         participant = ParticipantRepository(session).create(body.pseudonym)
@@ -197,7 +242,9 @@ def list_participants(
     return ParticipantRepository(session).list(limit, offset)
 
 
-@app.get("/v1/participants/{participant_id}", response_model=ParticipantResponse, tags=["participants"])
+@app.get(
+    "/v1/participants/{participant_id}", response_model=ParticipantResponse, tags=["participants"]
+)
 def get_participant(participant_id: uuid.UUID, session: Session = Depends(get_session)):
     participant = ParticipantRepository(session).get(participant_id)
     if participant is None:
@@ -209,10 +256,20 @@ def get_participant(participant_id: uuid.UUID, session: Session = Depends(get_se
 def create_recording(body: RecordingCreate, session: Session = Depends(get_session)):
     if ParticipantRepository(session).get(body.participant_id) is None:
         raise HTTPException(status_code=404, detail="Participant not found")
-    payload = json.dumps({"format": "four-channel-v1", "sample_rate_hz": body.sample_rate_hz, "samples": body.samples},
-                         sort_keys=True, separators=(",", ":"), allow_nan=False).encode("utf-8")
+    payload = json.dumps(
+        {
+            "format": "four-channel-v1",
+            "sample_rate_hz": body.sample_rate_hz,
+            "samples": body.samples,
+        },
+        sort_keys=True,
+        separators=(",", ":"),
+        allow_nan=False,
+    ).encode("utf-8")
     checksum = save_signal(payload)
-    recording = RecordingRepository(session).create(body.participant_id, body.sample_rate_hz, len(body.samples), checksum)
+    recording = RecordingRepository(session).create(
+        body.participant_id, body.sample_rate_hz, len(body.samples), checksum
+    )
     session.commit()
     return recording
 
@@ -235,7 +292,9 @@ def get_recording(recording_id: uuid.UUID, session: Session = Depends(get_sessio
     return recording
 
 
-@app.get("/v1/recordings/{recording_id}/signal", response_model=RecordingCreate, tags=["recordings"])
+@app.get(
+    "/v1/recordings/{recording_id}/signal", response_model=RecordingCreate, tags=["recordings"]
+)
 def get_recording_signal(recording_id: uuid.UUID, session: Session = Depends(get_session)):
     recording = RecordingRepository(session).get(recording_id)
     if recording is None:
@@ -244,12 +303,23 @@ def get_recording_signal(recording_id: uuid.UUID, session: Session = Depends(get
         payload = json.loads(read_signal(recording.artifact_sha256))
     except (OSError, ValueError) as error:
         raise HTTPException(status_code=503, detail="Signal artifact missing or invalid") from error
-    return {"participant_id": recording.participant_id, "sample_rate_hz": payload["sample_rate_hz"], "samples": payload["samples"]}
+    return {
+        "participant_id": recording.participant_id,
+        "sample_rate_hz": payload["sample_rate_hz"],
+        "samples": payload["samples"],
+    }
 
 
-@app.post("/v1/synthetic-splits", response_model=SyntheticSplitResponse, status_code=201, tags=["synthetic splits"])
+@app.post(
+    "/v1/synthetic-splits",
+    response_model=SyntheticSplitResponse,
+    status_code=201,
+    tags=["synthetic splits"],
+)
 def create_synthetic_split(body: SyntheticSplitCreate, session: Session = Depends(get_session)):
-    split = SyntheticSplit(source_recording_id=body.source_recording_id, test_recording_id=body.test_recording_id)
+    split = SyntheticSplit(
+        source_recording_id=body.source_recording_id, test_recording_id=body.test_recording_id
+    )
     try:
         session.add(split)
         session.flush()
@@ -261,11 +331,17 @@ def create_synthetic_split(body: SyntheticSplitCreate, session: Session = Depend
         if getattr(error.orig, "sqlstate", None) == "23503":
             raise HTTPException(status_code=404, detail="Recording not found") from error
         if getattr(error.orig, "sqlstate", None) == "23514":
-            raise HTTPException(status_code=409, detail="Source and test recordings overlap") from error
+            raise HTTPException(
+                status_code=409, detail="Source and test recordings overlap"
+            ) from error
         raise
 
 
-@app.get("/v1/synthetic-splits/{split_id}", response_model=SyntheticSplitResponse, tags=["synthetic splits"])
+@app.get(
+    "/v1/synthetic-splits/{split_id}",
+    response_model=SyntheticSplitResponse,
+    tags=["synthetic splits"],
+)
 def get_synthetic_split(split_id: uuid.UUID, session: Session = Depends(get_session)):
     split = session.get(SyntheticSplit, split_id)
     if split is None:
@@ -273,42 +349,88 @@ def get_synthetic_split(split_id: uuid.UUID, session: Session = Depends(get_sess
     return split
 
 
-@app.post("/v1/protocols", status_code=201, tags=["research protocol"])
+@app.post(
+    "/v1/protocols", response_model=ProtocolResponse, status_code=201, tags=["research protocol"]
+)
 def create_protocol(body: ProtocolCreate, session: Session = Depends(get_session)):
-    return commit_research_operation(session, lambda: ResearchRepository(session).create_protocol(body.name, body.version, body.gesture_codes))
+    return commit_research_operation(
+        session,
+        lambda: ResearchRepository(session).create_protocol(
+            body.name, body.version, body.gesture_codes
+        ),
+    )
 
 
-@app.post("/v1/segments", status_code=201, tags=["research protocol"])
+@app.post(
+    "/v1/segments", response_model=SegmentResponse, status_code=201, tags=["research protocol"]
+)
 def create_segment(body: SegmentCreate, session: Session = Depends(get_session)):
-    return commit_research_operation(session, lambda: ResearchRepository(session).create_segment(**body.model_dump()))
+    return commit_research_operation(
+        session, lambda: ResearchRepository(session).create_segment(**body.model_dump())
+    )
 
 
-@app.post("/v1/research-manifests", status_code=201, tags=["research protocol"])
+@app.post(
+    "/v1/research-manifests",
+    response_model=ManifestResponse,
+    status_code=201,
+    tags=["research protocol"],
+)
 def create_research_manifest(body: ManifestCreate, session: Session = Depends(get_session)):
-    return commit_research_operation(session, lambda: ResearchRepository(session).create_manifest(**body.model_dump()))
+    return commit_research_operation(
+        session, lambda: ResearchRepository(session).create_manifest(**body.model_dump())
+    )
 
 
-@app.post("/v1/research-manifests/{manifest_id}/participants", status_code=201, tags=["research protocol"])
-def add_research_participant(manifest_id: uuid.UUID, body: ParticipantAssignment, session: Session = Depends(get_session)):
-    return commit_research_operation(session, lambda: ResearchRepository(session).assign_participant(manifest_id, **body.model_dump()))
+@app.post(
+    "/v1/research-manifests/{manifest_id}/participants",
+    response_model=ParticipantAssignmentResponse,
+    status_code=201,
+    tags=["research protocol"],
+)
+def add_research_participant(
+    manifest_id: uuid.UUID, body: ParticipantAssignment, session: Session = Depends(get_session)
+):
+    return commit_research_operation(
+        session,
+        lambda: ResearchRepository(session).assign_participant(manifest_id, **body.model_dump()),
+    )
 
 
-@app.post("/v1/research-manifests/{manifest_id}/units", status_code=201, tags=["research protocol"])
-def add_research_unit(manifest_id: uuid.UUID, body: UnitCreate, session: Session = Depends(get_session)):
-    return commit_research_operation(session, lambda: ResearchRepository(session).add_unit(manifest_id, **body.model_dump()))
+@app.post(
+    "/v1/research-manifests/{manifest_id}/units",
+    response_model=UnitResponse,
+    status_code=201,
+    tags=["research protocol"],
+)
+def add_research_unit(
+    manifest_id: uuid.UUID, body: UnitCreate, session: Session = Depends(get_session)
+):
+    return commit_research_operation(
+        session, lambda: ResearchRepository(session).add_unit(manifest_id, **body.model_dump())
+    )
 
 
-@app.post("/v1/research-manifests/{manifest_id}/freeze", tags=["research protocol"])
+@app.post(
+    "/v1/research-manifests/{manifest_id}/freeze",
+    response_model=ManifestResponse,
+    tags=["research protocol"],
+)
 def freeze_research_manifest(manifest_id: uuid.UUID, session: Session = Depends(get_session)):
     def freeze():
         result = ResearchRepository(session).freeze_manifest(manifest_id)
         if result is None:
             raise HTTPException(status_code=404, detail="Draft manifest not found")
         return result
+
     return commit_research_operation(session, freeze)
 
 
-@app.get("/v1/research-manifests/{manifest_id}", tags=["research protocol"])
+@app.get(
+    "/v1/research-manifests/{manifest_id}",
+    response_model=ManifestResponse,
+    tags=["research protocol"],
+)
 def get_research_manifest(manifest_id: uuid.UUID, session: Session = Depends(get_session)):
     manifest = ResearchRepository(session).get_manifest(manifest_id)
     if manifest is None:
@@ -316,7 +438,11 @@ def get_research_manifest(manifest_id: uuid.UUID, session: Session = Depends(get
     return dict(manifest)
 
 
-@app.get("/v1/research-manifests/{manifest_id}/snapshot", tags=["research protocol"])
+@app.get(
+    "/v1/research-manifests/{manifest_id}/snapshot",
+    response_model=SnapshotResponse,
+    tags=["research protocol"],
+)
 def get_frozen_research_snapshot(manifest_id: uuid.UUID, session: Session = Depends(get_session)):
     snapshot = ResearchRepository(session).frozen_snapshot(manifest_id)
     if snapshot is None:
@@ -324,29 +450,65 @@ def get_frozen_research_snapshot(manifest_id: uuid.UUID, session: Session = Depe
     return snapshot
 
 
-@app.post("/v1/calibration-subsets", status_code=201, tags=["calibration"])
+@app.post(
+    "/v1/calibration-subsets",
+    response_model=CalibrationResponse,
+    status_code=201,
+    tags=["calibration"],
+)
 def create_calibration_subset(body: CalibrationCreate, session: Session = Depends(get_session)):
-    return commit_research_operation(session, lambda: ResearchRepository(session).create_calibration(**body.model_dump()))
+    return commit_research_operation(
+        session, lambda: ResearchRepository(session).create_calibration(**body.model_dump())
+    )
 
 
-@app.post("/v1/calibration-subsets/{subset_id}/items", status_code=201, tags=["calibration"])
-def add_calibration_item(subset_id: uuid.UUID, body: CalibrationItemCreate, session: Session = Depends(get_session)):
-    return commit_research_operation(session, lambda: ResearchRepository(session).add_calibration_item(subset_id, body.unit_id))
+@app.post(
+    "/v1/calibration-subsets/{subset_id}/items",
+    response_model=CalibrationItemResponse,
+    status_code=201,
+    tags=["calibration"],
+)
+def add_calibration_item(
+    subset_id: uuid.UUID, body: CalibrationItemCreate, session: Session = Depends(get_session)
+):
+    return commit_research_operation(
+        session, lambda: ResearchRepository(session).add_calibration_item(subset_id, body.unit_id)
+    )
 
 
-@app.post("/v1/calibration-subsets/{subset_id}/freeze", tags=["calibration"])
+@app.post(
+    "/v1/calibration-subsets/{subset_id}/freeze",
+    response_model=CalibrationResponse,
+    tags=["calibration"],
+)
 def freeze_calibration_subset(subset_id: uuid.UUID, session: Session = Depends(get_session)):
     def freeze():
         result = ResearchRepository(session).freeze_calibration(subset_id)
         if result is None:
             raise HTTPException(status_code=404, detail="Draft calibration subset not found")
         return result
+
     return commit_research_operation(session, freeze)
 
 
-@app.get("/v1/calibration-subsets/{subset_id}", tags=["calibration"])
+@app.get(
+    "/v1/calibration-subsets/{subset_id}",
+    response_model=CalibrationDetailResponse,
+    tags=["calibration"],
+)
 def get_calibration_subset(subset_id: uuid.UUID, session: Session = Depends(get_session)):
     subset = ResearchRepository(session).get_calibration(subset_id)
     if subset is None:
         raise HTTPException(status_code=404, detail="Calibration subset not found")
     return subset
+
+
+def published_openapi():
+    if app.openapi_schema is None:
+        app.openapi_schema = json.loads(
+            Path(__file__).with_name("openapi.json").read_text(encoding="utf-8")
+        )
+    return app.openapi_schema
+
+
+app.openapi = published_openapi

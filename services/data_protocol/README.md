@@ -1,5 +1,8 @@
 # Data and Protocol Service
 
+API reference: [versioned OpenAPI JSON](data_protocol/openapi.json), [Getting Started and integration tutorials](../../api/README.md). The gateway serves the complete client contract at `/docs`, `/redoc` and `/openapi.json`. CI validates stored specifications and all body examples.
+
+
 ## Database extension available
 
 The additive SQL migrations and [database acceptance tests](../../database/README_TEACHER.md) now provide identity persistence (separate schema), source/publication metadata, generic ML registry/leases/packages/evaluations and terminal desktop reports in their owning schemas. Existing endpoints still use their original tables; this does not automatically implement new cloud or Electron contracts.

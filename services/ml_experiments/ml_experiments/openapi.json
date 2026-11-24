@@ -1,0 +1,2816 @@
+{
+  "components": {
+    "schemas": {
+      "ApiError": {
+        "properties": {
+          "correlation_id": {
+            "type": "string"
+          },
+          "detail": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "detail"
+        ],
+        "type": "object"
+      },
+      "ConfusionCount": {
+        "properties": {
+          "actual_class": {
+            "title": "Actual Class",
+            "type": "string"
+          },
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "predicted_class": {
+            "title": "Predicted Class",
+            "type": "string"
+          }
+        },
+        "required": [
+          "actual_class",
+          "predicted_class",
+          "count"
+        ],
+        "title": "ConfusionCount",
+        "type": "object"
+      },
+      "EvaluationDetail": {
+        "properties": {
+          "accuracy": {
+            "title": "Accuracy",
+            "type": "number"
+          },
+          "calibration_subset_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Calibration Subset Id"
+          },
+          "condition": {
+            "enum": [
+              "source_only",
+              "personalised",
+              "target_only"
+            ],
+            "title": "Condition",
+            "type": "string"
+          },
+          "confusion_counts": {
+            "items": {
+              "$ref": "#/components/schemas/ConfusionCount"
+            },
+            "title": "Confusion Counts",
+            "type": "array"
+          },
+          "family": {
+            "enum": [
+              "lda",
+              "svm",
+              "mlp"
+            ],
+            "title": "Family",
+            "type": "string"
+          },
+          "feature_contract": {
+            "additionalProperties": true,
+            "title": "Feature Contract",
+            "type": "object"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "macro_f1": {
+            "title": "Macro F1",
+            "type": "number"
+          },
+          "manifest_id": {
+            "format": "uuid",
+            "title": "Manifest Id",
+            "type": "string"
+          },
+          "manifest_sha256": {
+            "title": "Manifest Sha256",
+            "type": "string"
+          },
+          "model_id": {
+            "format": "uuid",
+            "title": "Model Id",
+            "type": "string"
+          },
+          "rest_false_activation_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rest False Activation Rate"
+          },
+          "rest_missing_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rest Missing Reason"
+          },
+          "run_id": {
+            "format": "uuid",
+            "title": "Run Id",
+            "type": "string"
+          },
+          "seed": {
+            "title": "Seed",
+            "type": "integer"
+          },
+          "software_version": {
+            "title": "Software Version",
+            "type": "string"
+          },
+          "target_participant_id": {
+            "format": "uuid",
+            "title": "Target Participant Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "model_id",
+          "run_id",
+          "family",
+          "condition",
+          "manifest_id",
+          "manifest_sha256",
+          "target_participant_id",
+          "calibration_subset_id",
+          "feature_contract",
+          "seed",
+          "software_version",
+          "accuracy",
+          "macro_f1",
+          "rest_false_activation_rate",
+          "rest_missing_reason",
+          "confusion_counts"
+        ],
+        "title": "EvaluationDetail",
+        "type": "object"
+      },
+      "EvaluationResult": {
+        "properties": {
+          "accuracy": {
+            "title": "Accuracy",
+            "type": "number"
+          },
+          "calibration_subset_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Calibration Subset Id"
+          },
+          "condition": {
+            "enum": [
+              "source_only",
+              "personalised",
+              "target_only"
+            ],
+            "title": "Condition",
+            "type": "string"
+          },
+          "family": {
+            "enum": [
+              "lda",
+              "svm",
+              "mlp"
+            ],
+            "title": "Family",
+            "type": "string"
+          },
+          "feature_contract": {
+            "additionalProperties": true,
+            "title": "Feature Contract",
+            "type": "object"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "macro_f1": {
+            "title": "Macro F1",
+            "type": "number"
+          },
+          "manifest_id": {
+            "format": "uuid",
+            "title": "Manifest Id",
+            "type": "string"
+          },
+          "manifest_sha256": {
+            "title": "Manifest Sha256",
+            "type": "string"
+          },
+          "model_id": {
+            "format": "uuid",
+            "title": "Model Id",
+            "type": "string"
+          },
+          "rest_false_activation_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rest False Activation Rate"
+          },
+          "rest_missing_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rest Missing Reason"
+          },
+          "run_id": {
+            "format": "uuid",
+            "title": "Run Id",
+            "type": "string"
+          },
+          "seed": {
+            "title": "Seed",
+            "type": "integer"
+          },
+          "software_version": {
+            "title": "Software Version",
+            "type": "string"
+          },
+          "target_participant_id": {
+            "format": "uuid",
+            "title": "Target Participant Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "model_id",
+          "run_id",
+          "family",
+          "condition",
+          "manifest_id",
+          "manifest_sha256",
+          "target_participant_id",
+          "calibration_subset_id",
+          "feature_contract",
+          "seed",
+          "software_version",
+          "accuracy",
+          "macro_f1",
+          "rest_false_activation_rate",
+          "rest_missing_reason"
+        ],
+        "title": "EvaluationResult",
+        "type": "object"
+      },
+      "ExperimentCreate": {
+        "properties": {
+          "manifest_id": {
+            "format": "uuid",
+            "title": "Manifest Id",
+            "type": "string"
+          },
+          "target_participant_id": {
+            "format": "uuid",
+            "title": "Target Participant Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "manifest_id",
+          "target_participant_id"
+        ],
+        "title": "ExperimentCreate",
+        "type": "object"
+      },
+      "ExperimentMetrics": {
+        "properties": {
+          "accuracy": {
+            "title": "Accuracy",
+            "type": "number"
+          },
+          "class_order": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Class Order",
+            "type": "array"
+          },
+          "confusion_matrix": {
+            "items": {
+              "items": {
+                "type": "integer"
+              },
+              "type": "array"
+            },
+            "title": "Confusion Matrix",
+            "type": "array"
+          },
+          "macro_f1": {
+            "title": "Macro F1",
+            "type": "number"
+          },
+          "rest_false_activation_missing_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rest False Activation Missing Reason"
+          },
+          "rest_false_activation_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rest False Activation Rate"
+          },
+          "test_windows": {
+            "title": "Test Windows",
+            "type": "integer"
+          },
+          "training_windows": {
+            "title": "Training Windows",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "accuracy",
+          "macro_f1",
+          "rest_false_activation_rate",
+          "rest_false_activation_missing_reason",
+          "class_order",
+          "confusion_matrix",
+          "training_windows",
+          "test_windows"
+        ],
+        "title": "ExperimentMetrics",
+        "type": "object"
+      },
+      "ExperimentResponse": {
+        "properties": {
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "manifest_checksum": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Manifest Checksum"
+          },
+          "manifest_id": {
+            "format": "uuid",
+            "title": "Manifest Id",
+            "type": "string"
+          },
+          "metrics": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ExperimentMetrics"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "model": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LdaModel"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "model_checksum": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Checksum"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "target_participant_id": {
+            "format": "uuid",
+            "title": "Target Participant Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "manifest_id",
+          "target_participant_id",
+          "id",
+          "status",
+          "manifest_checksum",
+          "model",
+          "model_checksum",
+          "metrics",
+          "error"
+        ],
+        "title": "ExperimentResponse",
+        "type": "object"
+      },
+      "FeatureConfig": {
+        "properties": {
+          "channels": {
+            "title": "Channels",
+            "type": "integer"
+          },
+          "features": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Features",
+            "type": "array"
+          },
+          "filter": {
+            "title": "Filter",
+            "type": "string"
+          },
+          "fit_roles": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Fit Roles",
+            "type": "array"
+          },
+          "order": {
+            "title": "Order",
+            "type": "string"
+          },
+          "sample_rate_hz": {
+            "title": "Sample Rate Hz",
+            "type": "number"
+          },
+          "ssc_threshold": {
+            "title": "Ssc Threshold",
+            "type": "number"
+          },
+          "step_ms": {
+            "title": "Step Ms",
+            "type": "integer"
+          },
+          "version": {
+            "title": "Version",
+            "type": "string"
+          },
+          "window_ms": {
+            "title": "Window Ms",
+            "type": "integer"
+          },
+          "zc_threshold": {
+            "title": "Zc Threshold",
+            "type": "number"
+          }
+        },
+        "required": [
+          "version",
+          "channels",
+          "order",
+          "features",
+          "window_ms",
+          "step_ms",
+          "zc_threshold",
+          "ssc_threshold",
+          "filter",
+          "sample_rate_hz",
+          "fit_roles"
+        ],
+        "title": "FeatureConfig",
+        "type": "object"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "HealthResponse": {
+        "properties": {
+          "status": {
+            "enum": [
+              "live",
+              "ready"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "HealthResponse",
+        "type": "object"
+      },
+      "JobCreate": {
+        "properties": {
+          "split_id": {
+            "format": "uuid",
+            "title": "Split Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "split_id"
+        ],
+        "title": "JobCreate",
+        "type": "object"
+      },
+      "JobResponse": {
+        "properties": {
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "result": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SignalSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "split_checksum": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Split Checksum"
+          },
+          "split_id": {
+            "format": "uuid",
+            "title": "Split Id",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "split_id",
+          "status",
+          "split_checksum",
+          "result",
+          "error"
+        ],
+        "title": "JobResponse",
+        "type": "object"
+      },
+      "LdaModel": {
+        "properties": {
+          "classes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Classes",
+            "type": "array"
+          },
+          "coefficients": {
+            "items": {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            "title": "Coefficients",
+            "type": "array"
+          },
+          "family": {
+            "const": "lda",
+            "title": "Family",
+            "type": "string"
+          },
+          "feature_config": {
+            "$ref": "#/components/schemas/FeatureConfig"
+          },
+          "intercepts": {
+            "items": {
+              "type": "number"
+            },
+            "title": "Intercepts",
+            "type": "array"
+          },
+          "shrinkage": {
+            "title": "Shrinkage",
+            "type": "string"
+          },
+          "sklearn_version": {
+            "title": "Sklearn Version",
+            "type": "string"
+          },
+          "solver": {
+            "title": "Solver",
+            "type": "string"
+          }
+        },
+        "required": [
+          "family",
+          "solver",
+          "shrinkage",
+          "classes",
+          "coefficients",
+          "intercepts",
+          "feature_config",
+          "sklearn_version"
+        ],
+        "title": "LdaModel",
+        "type": "object"
+      },
+      "ModelPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PublishedModel"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_offset": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Offset"
+          }
+        },
+        "required": [
+          "items",
+          "next_offset"
+        ],
+        "title": "ModelPage",
+        "type": "object"
+      },
+      "PublishedModel": {
+        "properties": {
+          "adaptation_method": {
+            "enum": [
+              "none",
+              "lda_statistics",
+              "svm_weighted",
+              "mlp_replay"
+            ],
+            "title": "Adaptation Method",
+            "type": "string"
+          },
+          "calibration_subset_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Calibration Subset Id"
+          },
+          "condition": {
+            "enum": [
+              "source_only",
+              "personalised",
+              "target_only"
+            ],
+            "title": "Condition",
+            "type": "string"
+          },
+          "family": {
+            "enum": [
+              "lda",
+              "svm",
+              "mlp"
+            ],
+            "title": "Family",
+            "type": "string"
+          },
+          "feature_contract": {
+            "additionalProperties": true,
+            "title": "Feature Contract",
+            "type": "object"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "manifest_id": {
+            "format": "uuid",
+            "title": "Manifest Id",
+            "type": "string"
+          },
+          "manifest_sha256": {
+            "title": "Manifest Sha256",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "operator_id": {
+            "format": "uuid",
+            "title": "Operator Id",
+            "type": "string"
+          },
+          "parent_model_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Model Id"
+          },
+          "published_at": {
+            "format": "date-time",
+            "title": "Published At",
+            "type": "string"
+          },
+          "run_id": {
+            "format": "uuid",
+            "title": "Run Id",
+            "type": "string"
+          },
+          "sha256": {
+            "title": "Sha256",
+            "type": "string"
+          },
+          "size_bytes": {
+            "title": "Size Bytes",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "run_id",
+          "operator_id",
+          "family",
+          "condition",
+          "parent_model_id",
+          "calibration_subset_id",
+          "manifest_id",
+          "manifest_sha256",
+          "feature_contract",
+          "adaptation_method",
+          "sha256",
+          "size_bytes",
+          "published_at"
+        ],
+        "title": "PublishedModel",
+        "type": "object"
+      },
+      "RegistryRun": {
+        "properties": {
+          "calibration_subset_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Calibration Subset Id"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          },
+          "condition": {
+            "enum": [
+              "source_only",
+              "personalised",
+              "target_only"
+            ],
+            "title": "Condition",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "evaluated_model_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evaluated Model Id"
+          },
+          "execution_location": {
+            "enum": [
+              "local_workstation",
+              "desktop"
+            ],
+            "title": "Execution Location",
+            "type": "string"
+          },
+          "family": {
+            "enum": [
+              "lda",
+              "svm",
+              "mlp"
+            ],
+            "title": "Family",
+            "type": "string"
+          },
+          "feature_contract": {
+            "additionalProperties": true,
+            "title": "Feature Contract",
+            "type": "object"
+          },
+          "heartbeat_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Heartbeat At"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "source_train",
+              "personalise",
+              "target_train",
+              "evaluate"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "lease_expires_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lease Expires At"
+          },
+          "manifest_id": {
+            "format": "uuid",
+            "title": "Manifest Id",
+            "type": "string"
+          },
+          "manifest_sha256": {
+            "title": "Manifest Sha256",
+            "type": "string"
+          },
+          "parameters": {
+            "additionalProperties": true,
+            "title": "Parameters",
+            "type": "object"
+          },
+          "parent_model_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Model Id"
+          },
+          "seed": {
+            "title": "Seed",
+            "type": "integer"
+          },
+          "software_version": {
+            "title": "Software Version",
+            "type": "string"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "status": {
+            "enum": [
+              "queued",
+              "running",
+              "succeeded",
+              "failed",
+              "interrupted"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "target_participant_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Participant Id"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "family",
+          "condition",
+          "execution_location",
+          "manifest_id",
+          "manifest_sha256",
+          "target_participant_id",
+          "calibration_subset_id",
+          "parent_model_id",
+          "evaluated_model_id",
+          "feature_contract",
+          "parameters",
+          "seed",
+          "software_version",
+          "status",
+          "created_at",
+          "started_at",
+          "heartbeat_at",
+          "lease_expires_at",
+          "completed_at",
+          "error"
+        ],
+        "title": "RegistryRun",
+        "type": "object"
+      },
+      "ResultPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/EvaluationResult"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_offset": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Offset"
+          }
+        },
+        "required": [
+          "items",
+          "next_offset"
+        ],
+        "title": "ResultPage",
+        "type": "object"
+      },
+      "RunPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/RegistryRun"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_offset": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Offset"
+          }
+        },
+        "required": [
+          "items",
+          "next_offset"
+        ],
+        "title": "RunPage",
+        "type": "object"
+      },
+      "SignalSummary": {
+        "properties": {
+          "channel_means": {
+            "items": {
+              "type": "number"
+            },
+            "title": "Channel Means",
+            "type": "array"
+          },
+          "kind": {
+            "const": "synthetic_signal_summary",
+            "title": "Kind",
+            "type": "string"
+          },
+          "sample_count": {
+            "title": "Sample Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "kind",
+          "sample_count",
+          "channel_means"
+        ],
+        "title": "SignalSummary",
+        "type": "object"
+      },
+      "ValidationError": {
+        "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
+      }
+    },
+    "securitySchemes": {
+      "GatewayKey": {
+        "in": "header",
+        "name": "X-Cloud-Key",
+        "type": "apiKey"
+      }
+    }
+  },
+  "info": {
+    "contact": {
+      "name": "MyoControl repository",
+      "url": "https://github.com/milalaveo/myocontrol"
+    },
+    "description": "Implemented MyoControl API. Cloud registries are read-only. General training belongs to a local workstation; live acquisition/calibration belongs to Electron. Legacy Data/ML/replay operations are private single-host development APIs. Examples are synthetic; passwords/tokens/UUIDs/digests shown here are not live credentials or measured results.",
+    "title": "ML Experiments API",
+    "version": "0.1.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/health/live": {
+      "get": {
+        "description": "Liveness does not require database access.",
+        "operationId": "live_health_live_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "status": "live"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            },
+            "description": "Successful Response",
+            "headers": {
+              "X-Correlation-ID": {
+                "description": "Request correlation identifier, generated when no valid incoming identifier is supplied.",
+                "example": "tutorial-request-1",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Internal server error"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Internal server error",
+            "headers": {
+              "X-Correlation-ID": {
+                "description": "Request correlation identifier, generated when no valid incoming identifier is supplied.",
+                "example": "tutorial-request-1",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Check process liveness",
+        "tags": [
+          "health"
+        ]
+      }
+    },
+    "/health/ready": {
+      "get": {
+        "description": "Executes a read-only database query. A successful liveness response alone does not prove readiness.",
+        "operationId": "ready_health_ready_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "status": "ready"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            },
+            "description": "Successful Response",
+            "headers": {
+              "X-Correlation-ID": {
+                "description": "Request correlation identifier, generated when no valid incoming identifier is supplied.",
+                "example": "tutorial-request-1",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Internal server error"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Internal server error",
+            "headers": {
+              "X-Correlation-ID": {
+                "description": "Request correlation identifier, generated when no valid incoming identifier is supplied.",
+                "example": "tutorial-request-1",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Database operation failed"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Database operation failed",
+            "headers": {
+              "X-Correlation-ID": {
+                "description": "Request correlation identifier, generated when no valid incoming identifier is supplied.",
+                "example": "tutorial-request-1",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Check database readiness",
+        "tags": [
+          "health"
+        ]
+      }
+    },
+    "/metrics/": {
+      "get": {
+        "description": "Operational text endpoint. No account or research record payloads. Domain-service metrics stay on the private service network.",
+        "operationId": "ml_metrics",
+        "responses": {
+          "200": {
+            "content": {
+              "text/plain": {
+                "example": "# HELP process_cpu_seconds_total Total user and system CPU time spent in seconds.\n# TYPE process_cpu_seconds_total counter\nprocess_cpu_seconds_total 0.1\n",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Prometheus exposition format; metric values vary."
+          }
+        },
+        "summary": "Read Prometheus metrics",
+        "tags": [
+          "operations"
+        ]
+      }
+    },
+    "/v1/registry/{collection}": {
+      "get": {
+        "description": "Internal gateway-only API; collection is runs, models or results. Response is RunPage, ModelPage or ResultPage respectively. Queued metadata do not execute training.",
+        "operationId": "listing_v1_registry__collection__get",
+        "parameters": [
+          {
+            "example": "runs",
+            "in": "path",
+            "name": "collection",
+            "required": true,
+            "schema": {
+              "enum": [
+                "runs",
+                "models",
+                "results"
+              ],
+              "title": "Collection",
+              "type": "string"
+            }
+          },
+          {
+            "example": 25,
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "example": 0,
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          },
+          {
+            "example": "00000000-0000-4000-8000-000000000011",
+            "in": "header",
+            "name": "x-operator-id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Operator-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "items": [
+                    {
+                      "calibration_subset_id": null,
+                      "completed_at": null,
+                      "condition": "source_only",
+                      "created_at": "2026-11-24T10:00:00Z",
+                      "error": null,
+                      "evaluated_model_id": null,
+                      "execution_location": "local_workstation",
+                      "family": "lda",
+                      "feature_contract": {
+                        "channels": 4,
+                        "version": "time-domain-4ch-v1"
+                      },
+                      "heartbeat_at": null,
+                      "id": "00000000-0000-4000-8000-000000000009",
+                      "kind": "source_train",
+                      "lease_expires_at": null,
+                      "manifest_id": "00000000-0000-4000-8000-000000000004",
+                      "manifest_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                      "parameters": {},
+                      "parent_model_id": null,
+                      "seed": 1,
+                      "software_version": "tutorial-v1",
+                      "started_at": null,
+                      "status": "queued",
+                      "target_participant_id": null
+                    }
+                  ],
+                  "next_offset": null
+                },
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/RunPage"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ModelPage"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ResultPage"
+                    }
+                  ],
+                  "title": "Response Listing V1 Registry  Collection  Get"
+                }
+              }
+            },
+            "description": "Successful Response",
+            "headers": {
+              "X-Correlation-ID": {
+                "description": "Request correlation identifier, generated when no valid incoming identifier is supplied.",
+                "example": "tutorial-request-1",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Trusted gateway context required"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Trusted gateway context required",
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Bearer for operator routes; Basic for development proxy routes when a challenge is returned.",
+                "example": "Bearer",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Correlation-ID": {
+                "description": "Request correlation identifier, generated when no valid incoming identifier is supplied.",
+                "example": "tutorial-request-1",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Collection not found"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Collection not found",
+            "headers": {
+              "X-Correlation-ID": {
+                "description": "Request correlation identifier, generated when no valid incoming identifier is supplied.",
+                "example": "tutorial-request-1",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "validation": {
+                    "value": {
+                      "detail": [
+                        {
+                          "loc": [
+                            "query",
+                            "limit"
+                          ],
+                          "msg": "Input should be less than or equal to 100",
+                          "type": "less_than_equal"
+                        }
+                      ]
+                    }
+                  }
+                },
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/HTTPValidationError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ApiError"
+                    }
+                  ]
+                }
+              }
+            },
+            "description": "Input validation failed. Framework validation uses a detail array; explicit application validation can return a detail string.",
+            "headers": {
+              "X-Correlation-ID": {
+                "description": "Request correlation identifier, generated when no valid incoming identifier is supplied.",
+                "example": "tutorial-request-1",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Internal server error"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Internal server error",
+            "headers": {
+              "X-Correlation-ID": {
+                "description": "Request correlation identifier, generated when no valid incoming identifier is supplied.",
+                "example": "tutorial-request-1",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Cloud registry is not configured"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Cloud registry is not configured",
+            "headers": {
+              "X-Correlation-ID": {
+                "description": "Request correlation identifier, generated when no valid incoming identifier is supplied.",
+                "example": "tutorial-request-1",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "GatewayKey": []
+          }
+        ],
+        "summary": "List an operator-owned registry collection",
+        "tags": [
+          "cloud registry"
+        ]
+      }
+    },
+    "/v1/registry/{collection}/{item_id}": {
+      "get": {
+        "description": "Internal gateway-only API; run/model/result detail matches the selected collection. Foreign records return 404. Result detail includes actual/predicted confusion counts.",
+        "operationId": "detail_v1_registry__collection___item_id__get",
+        "parameters": [
+          {
+            "example": "runs",
+            "in": "path",
+            "name": "collection",
+            "required": true,
+            "schema": {
+              "enum": [
+                "runs",
+                "models",
+                "results"
+              ],
+              "title": "Collection",
+              "type": "string"
+            }
+          },
+          {
+            "example": "00000000-0000-4000-8000-000000000009",
+            "in": "path",
+            "name": "item_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Item Id",
+              "type": "string"
+            }
+          },
+          {
+            "example": "00000000-0000-4000-8000-000000000011",
+            "in": "header",
+            "name": "x-operator-id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Operator-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "calibration_subset_id": null,
+                  "completed_at": null,
+                  "condition": "source_only",
+                  "created_at": "2026-11-24T10:00:00Z",
+                  "error": null,
+                  "evaluated_model_id": null,
+                  "execution_location": "local_workstation",
+                  "family": "lda",
+                  "feature_contract": {
+                    "channels": 4,
+                    "version": "time-domain-4ch-v1"
+                  },
+                  "heartbeat_at": null,
+                  "id": "00000000-0000-4000-8000-000000000009",
+                  "kind": "source_train",
+                  "lease_expires_at": null,
+                  "manifest_id": "00000000-0000-4000-8000-000000000004",
+                  "manifest_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                  "parameters": {},
+                  "parent_model_id": null,
+                  "seed": 1,
+                  "software_version": "tutorial-v1",
+                  "started_at": null,
+                  "status": "queued",
+                  "target_participant_id": null
+                },
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/RegistryRun"
+                    },
+                    {
+                      "$ref": "#/components/schemas/PublishedModel"
+                    },
+                    {
+                      "$ref": "#/components/schemas/EvaluationDetail"
+                    }
+                  ],
+                  "title": "Response Detail V1 Registry  Collection   Item Id  Get"
+                }
+              }
+            },
+            "description": "Successful Response",
+            "headers": {
+              "X-Correlation-ID": {
+                "description": "Request correlation identifier, generated when no valid incoming identifier is supplied.",
+                "example": "tutorial-request-1",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Trusted gateway context required"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Trusted gateway context required",
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Bearer for operator routes; Basic for development proxy routes when a challenge is returned.",
+                "example": "Bearer",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Correlation-ID": {
+                "description": "Request correlation identifier, generated when no valid incoming identifier is supplied.",
+                "example": "tutorial-request-1",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Registry item not found"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Registry item not found",
+            "headers": {
+              "X-Correlation-ID": {
+                "description": "Request correlation identifier, generated when no valid incoming identifier is supplied.",
+                "example": "tutorial-request-1",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "validation": {
+                    "value": {
+                      "detail": [
+                        {
+                          "loc": [
+                            "path",
+                            "item_id"
+                          ],
+                          "msg": "Input should be a valid UUID",
+                          "type": "uuid_parsing"
+                        }
+                      ]
+                    }
+                  }
+                },
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/HTTPValidationError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ApiError"
+                    }
+                  ]
+                }
+              }
+            },
+            "description": "Input validation failed. Framework validation uses a detail array; explicit application validation can return a detail string.",
+            "headers": {
+              "X-Correlation-ID": {
+                "description": "Request correlation identifier, generated when no valid incoming identifier is supplied.",
+                "example": "tutorial-request-1",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Internal server error"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Internal server error",
+            "headers": {
+              "X-Correlation-ID": {
+                "description": "Request correlation identifier, generated when no valid incoming identifier is supplied.",
+                "example": "tutorial-request-1",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Cloud registry is not configured"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Cloud registry is not configured",
+            "headers": {
+              "X-Correlation-ID": {
+                "description": "Request correlation identifier, generated when no valid incoming identifier is supplied.",
+                "example": "tutorial-request-1",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "GatewayKey": []
+          }
+        ],
+        "summary": "Read an operator-owned registry record",
+        "tags": [
+          "cloud registry"
+        ]
+      }
+    },
+    "/v1/source-lda-experiments": {
+      "post": {
+        "description": "HTTP 202 means accepted, not trained. The separate single-host development worker consumes this legacy queue. Optional Idempotency-Key reuses an identical submission; a changed input is a conflict. This is not the remote workstation API.",
+        "operationId": "create_source_lda_experiment_v1_source_lda_experiments_post",
+        "parameters": [
+          {
+            "description": "Optional 1–100 character [A-Za-z0-9._:-] key. Reusing a key with changed inputs returns 409.",
+            "example": "tutorial-lda-submission-1",
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "example": {
+                "manifest_id": "00000000-0000-4000-8000-000000000004",
+                "target_participant_id": "00000000-0000-4000-8000-000000000008"
+              },
+              "schema": {
+                "$ref": "#/components/schemas/ExperimentCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": null,
+                  "id": "00000000-0000-4000-8000-000000000018",
+                  "manifest_checksum": null,
+                  "manifest_id": "00000000-0000-4000-8000-000000000004",
+                  "metrics": null,
+                  "model": null,
+                  "model_checksum": null,
+                  "status": "queued",
+                  "target_participant_id": "00000000-0000-4000-8000-000000000008"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ExperimentResponse"
+                }
+              }
+            },
+            "description": "Successful Response",
+            "headers": {
+              "Location": {
+                "description": "Status resource for the accepted job.",
+                "example": "/v1/source-lda-experiments/00000000-0000-4000-8000-000000000018",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Correlation-ID": {
+                "description": "Request correlation identifier, generated when no valid incoming identifier is supplied.",
+                "example": "tutorial-request-1",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Idempotency key belongs to a different request"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Idempotency key belongs to a different request",
+            "headers": {
+              "X-Correlation-ID": {
+                "description": "Request correlation identifier, generated when no valid incoming identifier is supplied.",
+                "example": "tutorial-request-1",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "application": {
+                    "value": {
+                      "detail": "Invalid idempotency key"
+                    }
+                  },
+                  "validation": {
+                    "value": {
+                      "detail": [
+                        {
+                          "loc": [
+                            "body",
+                            "manifest_id"
+                          ],
+                          "msg": "Field required",
+                          "type": "missing"
+                        }
+                      ]
+                    }
+                  }
+                },
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/HTTPValidationError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ApiError"
+                    }
+                  ]
+                }
+              }
+            },
+            "description": "Input validation failed. Framework validation uses a detail array; explicit application validation can return a detail string.",
+            "headers": {
+              "X-Correlation-ID": {
+                "description": "Request correlation identifier, generated when no valid incoming identifier is supplied.",
+                "example": "tutorial-request-1",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Internal server error"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Internal server error",
+            "headers": {
+              "X-Correlation-ID": {
+                "description": "Request correlation identifier, generated when no valid incoming identifier is supplied.",
+                "example": "tutorial-request-1",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Database operation failed"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Database operation failed",
+            "headers": {
+              "X-Correlation-ID": {
+                "description": "Request correlation identifier, generated when no valid incoming identifier is supplied.",
+                "example": "tutorial-request-1",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Queue a development source-only LDA experiment",
+        "tags": [
+          "experiments"
+        ]
+      }
+    },
+    "/v1/source-lda-experiments/{run_id}": {
+      "get": {
+        "description": "Poll queued/running until succeeded, failed or interrupted. Models/metrics remain null until successful processing. Synthetic scores do not measure real EMG quality.",
+        "operationId": "get_source_lda_experiment_v1_source_lda_experiments__run_id__get",
+        "parameters": [
+          {
+            "example": "00000000-0000-4000-8000-000000000018",
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": null,
+                  "id": "00000000-0000-4000-8000-000000000018",
+                  "manifest_checksum": null,
+                  "manifest_id": "00000000-0000-4000-8000-000000000004",
+                  "metrics": null,
+                  "model": null,
+                  "model_checksum": null,
+                  "status": "queued",
+                  "target_participant_id": "00000000-0000-4000-8000-000000000008"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ExperimentResponse"
+                }
+              }
+            },
+            "description": "Successful Response",
+            "headers": {
+              "X-Correlation-ID": {
+                "description": "Request correlation identifier, generated when no valid incoming identifier is supplied.",
+                "example": "tutorial-request-1",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Experiment not found"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Experiment not found",
+            "headers": {
+              "X-Correlation-ID": {
+                "description": "Request correlation identifier, generated when no valid incoming identifier is supplied.",
+                "example": "tutorial-request-1",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "validation": {
+                    "value": {
+                      "detail": [
+                        {
+                          "loc": [
+                            "path",
+                            "run_id"
+                          ],
+                          "msg": "Input should be a valid UUID",
+                          "type": "uuid_parsing"
+                        }
+                      ]
+                    }
+                  }
+                },
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/HTTPValidationError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ApiError"
+                    }
+                  ]
+                }
+              }
+            },
+            "description": "Input validation failed. Framework validation uses a detail array; explicit application validation can return a detail string.",
+            "headers": {
+              "X-Correlation-ID": {
+                "description": "Request correlation identifier, generated when no valid incoming identifier is supplied.",
+                "example": "tutorial-request-1",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Internal server error"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Internal server error",
+            "headers": {
+              "X-Correlation-ID": {
+                "description": "Request correlation identifier, generated when no valid incoming identifier is supplied.",
+                "example": "tutorial-request-1",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Database operation failed"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Database operation failed",
+            "headers": {
+              "X-Correlation-ID": {
+                "description": "Request correlation identifier, generated when no valid incoming identifier is supplied.",
+                "example": "tutorial-request-1",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Read an LDA experiment",
+        "tags": [
+          "experiments"
+        ]
+      }
+    },
+    "/v1/source-lda-experiments/{run_id}/model": {
+      "get": {
+        "description": "Exact stored JSON bytes. Verify SHA-256 against model_checksum from the run (or X-Artifact-SHA256); do not reserialize before hashing. Coefficients in documentation examples are illustrative.",
+        "operationId": "get_source_lda_model_v1_source_lda_experiments__run_id__model_get",
+        "parameters": [
+          {
+            "example": "00000000-0000-4000-8000-000000000018",
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "classes": [
+                    "fist",
+                    "rest"
+                  ],
+                  "coefficients": [
+                    [
+                      0.1,
+                      0.1,
+                      0.1,
+                      0.1,
+                      0.1,
+                      0.1,
+                      0.1,
+                      0.1,
+                      0.1,
+                      0.1,
+                      0.1,
+                      0.1,
+                      0.1,
+                      0.1,
+                      0.1,
+                      0.1,
+                      0.1,
+                      0.1,
+                      0.1,
+                      0.1
+                    ]
+                  ],
+                  "family": "lda",
+                  "feature_config": {
+                    "channels": 4,
+                    "features": [
+                      "mav",
+                      "rms",
+                      "waveform_length",
+                      "zero_crossings",
+                      "slope_sign_changes"
+                    ],
+                    "filter": "none",
+                    "fit_roles": [
+                      "source_train"
+                    ],
+                    "order": "channel-major",
+                    "sample_rate_hz": 1000,
+                    "ssc_threshold": 0,
+                    "step_ms": 100,
+                    "version": "time-domain-4ch-v1",
+                    "window_ms": 200,
+                    "zc_threshold": 0
+                  },
+                  "intercepts": [
+                    0.0
+                  ],
+                  "shrinkage": "auto",
+                  "sklearn_version": "1.6.1",
+                  "solver": "lsqr"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/LdaModel"
+                }
+              }
+            },
+            "description": "Successful Response",
+            "headers": {
+              "X-Artifact-SHA256": {
+                "description": "SHA-256 of exact response bytes; verify before parsing or reserialization.",
+                "example": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Correlation-ID": {
+                "description": "Request correlation identifier, generated when no valid incoming identifier is supplied.",
+                "example": "tutorial-request-1",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Published model not found"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Published model not found",
+            "headers": {
+              "X-Correlation-ID": {
+                "description": "Request correlation identifier, generated when no valid incoming identifier is supplied.",
+                "example": "tutorial-request-1",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "validation": {
+                    "value": {
+                      "detail": [
+                        {
+                          "loc": [
+                            "path",
+                            "run_id"
+                          ],
+                          "msg": "Input should be a valid UUID",
+                          "type": "uuid_parsing"
+                        }
+                      ]
+                    }
+                  }
+                },
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/HTTPValidationError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ApiError"
+                    }
+                  ]
+                }
+              }
+            },
+            "description": "Input validation failed. Framework validation uses a detail array; explicit application validation can return a detail string.",
+            "headers": {
+              "X-Correlation-ID": {
+                "description": "Request correlation identifier, generated when no valid incoming identifier is supplied.",
+                "example": "tutorial-request-1",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Internal server error"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Internal server error",
+            "headers": {
+              "X-Correlation-ID": {
+                "description": "Request correlation identifier, generated when no valid incoming identifier is supplied.",
+                "example": "tutorial-request-1",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Database operation failed"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Database operation failed",
+            "headers": {
+              "X-Correlation-ID": {
+                "description": "Request correlation identifier, generated when no valid incoming identifier is supplied.",
+                "example": "tutorial-request-1",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Download a published LDA artifact",
+        "tags": [
+          "experiments"
+        ]
+      }
+    },
+    "/v1/synthetic-signal-summary-jobs": {
+      "post": {
+        "description": "Development integration check, completed synchronously. HTTP 201 persists either a succeeded or failed job; inspect status/error.",
+        "operationId": "create_job_v1_synthetic_signal_summary_jobs_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "example": {
+                "split_id": "00000000-0000-4000-8000-000000000016"
+              },
+              "schema": {
+                "$ref": "#/components/schemas/JobCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": null,
+                  "id": "00000000-0000-4000-8000-000000000017",
+                  "result": {
+                    "channel_means": [
+                      1.5,
+                      2.5,
+                      3.5,
+                      4.5
+                    ],
+                    "kind": "synthetic_signal_summary",
+                    "sample_count": 2
+                  },
+                  "split_checksum": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                  "split_id": "00000000-0000-4000-8000-000000000016",
+                  "status": "succeeded"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/JobResponse"
+                }
+              }
+            },
+            "description": "Successful Response",
+            "headers": {
+              "X-Correlation-ID": {
+                "description": "Request correlation identifier, generated when no valid incoming identifier is supplied.",
+                "example": "tutorial-request-1",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "validation": {
+                    "value": {
+                      "detail": [
+                        {
+                          "loc": [
+                            "body",
+                            "split_id"
+                          ],
+                          "msg": "Field required",
+                          "type": "missing"
+                        }
+                      ]
+                    }
+                  }
+                },
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/HTTPValidationError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ApiError"
+                    }
+                  ]
+                }
+              }
+            },
+            "description": "Input validation failed. Framework validation uses a detail array; explicit application validation can return a detail string.",
+            "headers": {
+              "X-Correlation-ID": {
+                "description": "Request correlation identifier, generated when no valid incoming identifier is supplied.",
+                "example": "tutorial-request-1",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Internal server error"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Internal server error",
+            "headers": {
+              "X-Correlation-ID": {
+                "description": "Request correlation identifier, generated when no valid incoming identifier is supplied.",
+                "example": "tutorial-request-1",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Database operation failed"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Database operation failed",
+            "headers": {
+              "X-Correlation-ID": {
+                "description": "Request correlation identifier, generated when no valid incoming identifier is supplied.",
+                "example": "tutorial-request-1",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Compute a synthetic signal summary",
+        "tags": [
+          "ml"
+        ]
+      }
+    },
+    "/v1/synthetic-signal-summary-jobs/{job_id}": {
+      "get": {
+        "description": "Job failure is represented by status/error in the response, not a successful scientific result.",
+        "operationId": "get_job_v1_synthetic_signal_summary_jobs__job_id__get",
+        "parameters": [
+          {
+            "example": "00000000-0000-4000-8000-000000000017",
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": null,
+                  "id": "00000000-0000-4000-8000-000000000017",
+                  "result": {
+                    "channel_means": [
+                      1.5,
+                      2.5,
+                      3.5,
+                      4.5
+                    ],
+                    "kind": "synthetic_signal_summary",
+                    "sample_count": 2
+                  },
+                  "split_checksum": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                  "split_id": "00000000-0000-4000-8000-000000000016",
+                  "status": "succeeded"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/JobResponse"
+                }
+              }
+            },
+            "description": "Successful Response",
+            "headers": {
+              "X-Correlation-ID": {
+                "description": "Request correlation identifier, generated when no valid incoming identifier is supplied.",
+                "example": "tutorial-request-1",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Job not found"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Job not found",
+            "headers": {
+              "X-Correlation-ID": {
+                "description": "Request correlation identifier, generated when no valid incoming identifier is supplied.",
+                "example": "tutorial-request-1",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "validation": {
+                    "value": {
+                      "detail": [
+                        {
+                          "loc": [
+                            "path",
+                            "job_id"
+                          ],
+                          "msg": "Input should be a valid UUID",
+                          "type": "uuid_parsing"
+                        }
+                      ]
+                    }
+                  }
+                },
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/HTTPValidationError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ApiError"
+                    }
+                  ]
+                }
+              }
+            },
+            "description": "Input validation failed. Framework validation uses a detail array; explicit application validation can return a detail string.",
+            "headers": {
+              "X-Correlation-ID": {
+                "description": "Request correlation identifier, generated when no valid incoming identifier is supplied.",
+                "example": "tutorial-request-1",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Internal server error"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Internal server error",
+            "headers": {
+              "X-Correlation-ID": {
+                "description": "Request correlation identifier, generated when no valid incoming identifier is supplied.",
+                "example": "tutorial-request-1",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Database operation failed"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Database operation failed",
+            "headers": {
+              "X-Correlation-ID": {
+                "description": "Request correlation identifier, generated when no valid incoming identifier is supplied.",
+                "example": "tutorial-request-1",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Read a signal-summary job",
+        "tags": [
+          "ml"
+        ]
+      }
+    }
+  },
+  "servers": [
+    {
+      "description": "Local development; domain-service ports are internal in Compose. Use the gateway contract for host access.",
+      "url": "http://127.0.0.1:8002"
+    }
+  ]
+}

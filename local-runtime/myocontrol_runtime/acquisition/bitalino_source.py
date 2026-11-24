@@ -22,6 +22,12 @@ class BitalinoSource:
             raise ValueError(
                 "On macOS select the paired Bluetooth serial port (/dev/...), not a MAC address"
             )
+        address = address.strip()
+        if platform.system() == "Windows":
+            if re.fullmatch(r"COM[0-9]+", address, re.IGNORECASE):
+                address = address.upper()
+            elif re.fullmatch(r"(?:[0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}", address):
+                raise ValueError("Pair BITalino in Windows Bluetooth settings and select its outgoing COM port")
         self.channels = sorted(channels)
         self.rate = sample_rate_hz
         self.device = None

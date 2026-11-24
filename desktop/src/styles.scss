@@ -237,3 +237,54 @@ td small {
     grid-template-columns: 1fr;
   }
 }
+
+.sensor-picker {
+  margin: 20px 0;
+}
+.sensor-picker__heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  color: #525252;
+  font-size: 12px;
+}
+.sensor-picker__row {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+}
+.sensor-picker__row > .cds--form-item {
+  flex: 1;
+  min-width: 0;
+}
+.sensor-picker__note {
+  margin-top: 8px;
+  color: #6f6f6f;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.sensor-picker__manual-toggle {
+  margin-top: 4px;
+}
+.sensor-picker .cds--toggletip-content p + p {
+  margin-top: 8px;
+}
+
+.personal-calibration {
+  margin-top: 24px;
+}
+.personal-calibration .actions {
+  margin-top: 16px;
+}
+.calibration-selection {
+  max-height: 320px;
+  overflow: auto;
+  margin: 16px 0;
+}
+.calibration-assessment {
+  margin-top: 24px;
+}
+.calibration-assessment p {
+  margin: 12px 0;
+}

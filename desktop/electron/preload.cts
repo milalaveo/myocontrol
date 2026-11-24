@@ -17,4 +17,8 @@ contextBridge.exposeInMainWorld('myocontrol', {
   login: (body: { base: string; email: string; password: string }) =>
     ipcRenderer.invoke('cloud:login', body),
   logout: () => ipcRenderer.invoke('cloud:logout'),
+  sensorSelection: () => ipcRenderer.invoke('sensor:selection'),
+  selectSensor: (value: { address: string; label: string }) =>
+    ipcRenderer.invoke('sensor:select', value),
+  openBluetoothSettings: () => ipcRenderer.invoke('sensor:bluetooth-settings'),
 })

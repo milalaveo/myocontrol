@@ -1,3 +1,15 @@
+export type CalibrationAssessment = {
+  participant_key: string
+  class_order: string[]
+  confusion_matrix: number[][]
+  accuracy: number
+  balanced_accuracy: number
+  rest_false_activation_rate: number
+  train_repetitions: Record<string, number>
+  test_repetitions: Record<string, number>
+  test_windows: number
+  scope: string
+}
 export type Metadata = {
   sample_rate_hz: number
   channel_map: number[]
@@ -33,7 +45,13 @@ export type Status = {
   message: string
   recognition: string
   metadata?: Metadata
-  model: { name: string; sample_rate_hz: number; classes: string[] } | null
+  model: {
+    name: string
+    channels: number
+    sample_rate_hz: number
+    classes: string[]
+    calibration?: CalibrationAssessment | null
+  } | null
   cloud: SyncStatus
 }
 export type Signal = {
@@ -78,6 +96,9 @@ declare global {
       identity(): Promise<Identity>
       login(body: { base: string; email: string; password: string }): Promise<Identity>
       logout(): Promise<Identity>
+      sensorSelection(): Promise<{ address: string; label: string } | null>
+      selectSensor(value: { address: string; label: string }): Promise<void>
+      openBluetoothSettings(): Promise<void>
     }
   }
 }

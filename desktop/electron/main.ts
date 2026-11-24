@@ -1,7 +1,8 @@
-import { app, BrowserWindow, dialog, ipcMain } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { RuntimeManager } from './runtime-manager.js'
+import { readSensorSelection, saveSensorSelection } from './sensor-selection.js'
 import {
   clearCredentials,
   publicIdentity,
@@ -48,6 +49,8 @@ const commands = new Set([
   'pause',
   'resume',
   'clear_model',
+  'train_personal_model',
+  'scan_sensors',
   'sync_status',
   'queue_upload',
   'retry_sync',
@@ -113,6 +116,22 @@ ipcMain.handle('desktop:restart', async (event) => {
   if (credentials) await runtime.call('cloud_restore', { credentials })
   return runtime.call('status')
 })
+ipcMain.handle('sensor:selection', (event) => {
+  trusted(event)
+  return readSensorSelection()
+})
+ipcMain.handle('sensor:select', (event, value: unknown) => {
+  trusted(event)
+  return saveSensorSelection(value)
+})
+ipcMain.handle('sensor:bluetooth-settings', async (event) => {
+  trusted(event)
+  if (process.platform === 'win32') return shell.openExternal('ms-settings:bluetooth')
+  if (process.platform === 'darwin')
+    return shell.openExternal('x-apple.systempreferences:com.apple.Bluetooth')
+  throw new Error('Open Bluetooth pairing from your operating system settings')
+})
+
 ipcMain.handle('cloud:identity', (event) => {
   trusted(event)
   return publicIdentity(credentials)

@@ -16,6 +16,8 @@ import {
 } from '@carbon/react'
 import { Cloud, DataBase, Play, Recording as RecordingIcon, Stop } from '@carbon/icons-react'
 import SignalChart from './components/SignalChart'
+import SensorPicker from './components/SensorPicker'
+import PersonalCalibration from './components/PersonalCalibration'
 import type { Identity, Library, Signal, Status, SyncStatus } from './types'
 
 const emptyLibrary: Library = { items: [], calibration: [] }
@@ -190,16 +192,10 @@ export default function App() {
                     disabled={active}
                     helperText="Use a research identifier without personal details."
                   />
-                  <TextInput
-                    id="device"
-                    labelText="Bluetooth address or paired serial port"
-                    placeholder="COM5, /dev/… or device MAC address"
-                    value={address}
-                    onChange={(event) => setAddress(event.target.value)}
-                    required
-                    maxLength={200}
-                    disabled={active}
-                    helperText="On macOS use the paired Bluetooth serial port."
+                  <SensorPicker
+                    address={address}
+                    onChange={setAddress}
+                    disabled={active || busy || !status}
                   />
                   <div className="form-row">
                     <Select
@@ -346,6 +342,11 @@ export default function App() {
                     />
                   </Suspense>
                   <p>{status?.model?.name ?? 'Select an exported LDA model JSON'}</p>
+                  {status?.model && (
+                    <p className="description">
+                      {status.model.channels} channels · {status.model.sample_rate_hz} Hz
+                    </p>
+                  )}
                   <p className="description">
                     {status?.recognition ?? 'No model selected'}
                     {prediction ? ` · ${prediction.processing_ms.toFixed(2)} ms processing` : ''}
@@ -360,15 +361,16 @@ export default function App() {
                     </Button>
                     <Button
                       kind="ghost"
-                      disabled={active || busy || !status?.model}
+                      disabled={active || busy}
                       onClick={() => void act(() => window.myocontrol.request('clear_model'))}
                     >
                       Clear model
                     </Button>
                   </div>
                   <p className="caption">
-                    Calibration capture collects labelled repetitions. Model adaptation requires an
-                    adaptation artifact and is not available in this build.
+                    Imported models are saved locally and restored on launch. Clear model removes
+                    the saved selection. Record labelled calibration repetitions here, then train a
+                    personal model under Recordings. Personal training uses your recordings only.
                   </p>
                 </Tile>
               </div>
@@ -490,22 +492,28 @@ export default function App() {
                 </p>
               )}
             </div>
-            <Tile>
-              <h2>Calibration data collected</h2>
-              {library.calibration.length ? (
-                library.calibration.map((item) => (
-                  <p
-                    key={`${item.participant_key}:${item.gesture}:${item.sample_rate_hz}:${item.channel_map}:${item.units}`}
-                  >
-                    {item.participant_key} · {item.gesture.replaceAll('_', ' ')} ·{' '}
-                    {item.channel_map.length} channels / {item.sample_rate_hz} Hz ·{' '}
-                    {item.repetitions} repetitions · {item.seconds.toFixed(1)} seconds
-                  </p>
-                ))
-              ) : (
-                <p className="description">No labelled calibration repetitions yet.</p>
-              )}
-            </Tile>
+            <PersonalCalibration
+              recordings={library.items}
+              disabled={active || busy || !status}
+              assessment={status?.model?.calibration}
+              onPrepare={(count) => {
+                setPurpose('calibration')
+                setDuration(6)
+                setChannels(count)
+                setRate('1000')
+                setPage('Acquisition')
+              }}
+              onTrain={(ids) =>
+                void act(async () => {
+                  const result = await window.myocontrol.request<{ model: { channels: number } }>(
+                    'train_personal_model',
+                    { recording_ids: ids },
+                  )
+                  setChannels(result.model.channels)
+                  setRate('1000')
+                })
+              }
+            />
           </>
         )}
         {page === 'Cloud sync' && (

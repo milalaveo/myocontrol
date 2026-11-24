@@ -5,6 +5,7 @@ import sys
 import threading
 
 from .engine import Engine
+from .acquisition.discovery import scan_sensors
 
 
 def main():
@@ -25,7 +26,12 @@ def main():
 
     with redirect_stdout(sys.stderr):
         engine = Engine(args.data_dir, emit)
+        def discover_sensors():
+            engine.require_idle()
+            return scan_sensors()
+
         commands = {
+            "scan_sensors": discover_sensors,
             "status": engine.status,
             "start_capture": engine.start_capture,
             "start_replay": engine.start_replay,

@@ -26,6 +26,7 @@ class Recording(Base):
     sample_rate_hz: Mapped[float] = mapped_column(Numeric, nullable=False)
     sample_count: Mapped[int] = mapped_column(Integer, nullable=False)
     artifact_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    channel_count: Mapped[int] = mapped_column(Integer, nullable=False, server_default="4")
 
 
 class SyntheticSplit(Base):

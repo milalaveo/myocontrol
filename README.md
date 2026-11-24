@@ -20,6 +20,8 @@ The repository is public/readable for review. Operator access is separate from d
 - `backend/` — Python application, artifact storage and tests.
 - `database/` — PostgreSQL schema, migrations, roles and database documentation.
 - `frontend/` — operator interface.
+- `desktop/` — Electron main/preload and local Carbon UI.
+- `local-runtime/` — Python acquisition, inference, persistence and recording sync.
 - `experiments/` — experiment protocols and configurations.
 - `data/` — local data and artifact storage guidance.
 - `architecture/` — proposed service boundaries, deployment and migration plan.
@@ -35,7 +37,7 @@ The following work remains **TBD**:
 
 - Import and validation of real recordings, including Ninapro DB2.
 - Validation of signal processing, model training and evaluation on measured data, plus personalised and target-only models.
-- Cloud deployment and further authorization of legacy domain routes, Electron packaging, local calibration/adaptation and live SDK integration, remote local-training worker contracts and synchronization.
+- Cloud deployment and further authorization of legacy domain routes; real Bluetooth/M1 validation; local model adaptation, SVM/MLP runtime support, model/report synchronization and remote local-training worker contracts.
 - Final experimental protocol, deployment configuration and data retention policy.
 
 Participant data, restricted datasets, credentials and generated artifacts must remain outside version control.
@@ -63,3 +65,7 @@ Run `docker compose --profile observability stop` to stop the local services wit
 ## Operator interface
 
 Start the React interface with `docker compose --profile ui up -d --build` and open **http://127.0.0.1:3000**. The cloud portal signs in individual operators and reads their experiments, published models and completed evaluations from the new registry. Create an account using the [gateway setup](gateway/README.md); the shared development gateway password is not a portal account. Interactive signal/hand components remain in source for Electron reuse. See the [frontend guide](frontend/README.md) for implemented flows and remaining scope.
+
+## Local desktop
+
+See [desktop setup and delivery](desktop/README.md). The local Carbon application defaults to **A1?A4 at 1000 Hz**, supports capture, labelled calibration recording, replay, local JSON LDA inference/hand display, SQLite persistence and a recording upload outbox. Start it from `desktop/` with `npm ci`, `npm run setup:runtime`, then `npm run dev`. The synthetic bundled demo needs no connected device. Hardware/M1 compatibility and model adaptation remain unverified/unimplemented respectively.

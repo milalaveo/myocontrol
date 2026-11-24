@@ -92,6 +92,7 @@ services:
     environment:
       <<: *tracing
       OTEL_SERVICE_NAME: data-protocol
+      CLOUD_INTERNAL_KEY: ${CLOUD_INTERNAL_KEY:-}
       DB_HOST: database
       DB_NAME: ${POSTGRES_DB:-thesis}
       DATA_DB_PASSWORD: ${DATA_DB_PASSWORD:?Set DATA_DB_PASSWORD}

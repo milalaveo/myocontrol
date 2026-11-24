@@ -49,32 +49,50 @@ DATA = {
     "POST /v1/protocols": (
         "Create a protocol version",
         "Gesture codes are unique and must include rest.",
-        {404: "Referenced record not found", 409: "Operation conflicts with split constraints"},
+        {
+            404: "Referenced record not found",
+            409: "Operation conflicts with split constraints",
+        },
     ),
     "POST /v1/segments": (
         "Create a labelled segment",
         "Sample coordinates are half-open [start_sample, end_sample); recording and bounds are checked transactionally.",
-        {404: "Referenced record not found", 409: "Operation conflicts with split constraints"},
+        {
+            404: "Referenced record not found",
+            409: "Operation conflicts with split constraints",
+        },
     ),
     "POST /v1/research-manifests": (
         "Create a draft research manifest",
         "A manifest references one protocol version. Membership can be edited only while draft.",
-        {404: "Referenced record not found", 409: "Operation conflicts with split constraints"},
+        {
+            404: "Referenced record not found",
+            409: "Operation conflicts with split constraints",
+        },
     ),
     "POST /v1/research-manifests/{manifest_id}/participants": (
         "Assign a participant to a manifest",
         "Source, development and target membership must obey the database split constraints.",
-        {404: "Referenced record not found", 409: "Operation conflicts with split constraints"},
+        {
+            404: "Referenced record not found",
+            409: "Operation conflicts with split constraints",
+        },
     ),
     "POST /v1/research-manifests/{manifest_id}/units": (
         "Add a labelled unit to a manifest",
         "A unit binds a segment, participant category and fit/evaluation role. Test data must not be used for fitting.",
-        {404: "Referenced record not found", 409: "Operation conflicts with split constraints"},
+        {
+            404: "Referenced record not found",
+            409: "Operation conflicts with split constraints",
+        },
     ),
     "POST /v1/research-manifests/{manifest_id}/freeze": (
         "Freeze a research manifest",
         "Validates membership, computes the checksum and makes its research inputs immutable.",
-        {404: "Draft manifest not found", 409: "Operation conflicts with split constraints"},
+        {
+            404: "Draft manifest not found",
+            409: "Operation conflicts with split constraints",
+        },
     ),
     "GET /v1/research-manifests/{manifest_id}": (
         "Read a research manifest",
@@ -89,12 +107,18 @@ DATA = {
     "POST /v1/calibration-subsets": (
         "Create a calibration subset",
         "Declares a target participant, selection version and per-gesture budget against a manifest. No model adaptation is executed here.",
-        {404: "Referenced record not found", 409: "Operation conflicts with split constraints"},
+        {
+            404: "Referenced record not found",
+            409: "Operation conflicts with split constraints",
+        },
     ),
     "POST /v1/calibration-subsets/{subset_id}/items": (
         "Add a calibration unit",
         "Only compatible target-calibration membership can be selected; target-test units cannot enter calibration.",
-        {404: "Referenced record not found", 409: "Operation conflicts with split constraints"},
+        {
+            404: "Referenced record not found",
+            409: "Operation conflicts with split constraints",
+        },
     ),
     "POST /v1/calibration-subsets/{subset_id}/freeze": (
         "Freeze calibration membership",
@@ -125,7 +149,10 @@ ML = {
     "POST /v1/source-lda-experiments": (
         "Queue a development source-only LDA experiment",
         "HTTP 202 means accepted, not trained. The separate single-host development worker consumes this legacy queue. Optional Idempotency-Key reuses an identical submission; a changed input is a conflict. This is not the remote workstation API.",
-        {409: "Idempotency key belongs to a different request", 422: "Invalid idempotency key"},
+        {
+            409: "Idempotency key belongs to a different request",
+            422: "Invalid idempotency key",
+        },
     ),
     "GET /v1/source-lda-experiments/{run_id}": (
         "Read an LDA experiment",
@@ -243,5 +270,62 @@ GATEWAY = {
         },
     ),
 }
+
+DATA.update(
+    {
+        "POST /v1/client-recordings": (
+            "Publish a desktop recording part",
+            "Private gateway-only operation. Canonical payload hash and operator/local UUID make retries idempotent, including after desktop client rotation. Parts contain at most 10,000 samples; channel widths are preserved. Source checksum is a client attestation, not independent proof of measurement.",
+            {
+                401: "Trusted desktop gateway context required",
+                403: "Desktop client context required for publication",
+                409: "Local recording identity conflicts with a previous publication",
+            },
+        ),
+        "GET /v1/client-recordings": (
+            "List an operator's desktop recording parts",
+            "Private gateway-only operation. Ownership is selected exclusively from the trusted gateway context. Paginated by receipt time and UUID.",
+            {401: "Trusted desktop gateway context required"},
+        ),
+        "GET /v1/client-recordings/{recording_id}/signal": (
+            "Download owned samples",
+            "Private gateway-only operation. Returns the exact stored samples and ordered channel mapping after verifying the artifact digest.",
+            {
+                401: "Trusted desktop gateway context required",
+                404: "Recording not found",
+                503: "Signal artifact missing or invalid",
+            },
+        ),
+    }
+)
+DATA["GET /v1/recordings/{recording_id}/signal"][2][
+    409
+] = "Legacy signal endpoint requires four channels; use the owned cloud signal endpoint"
+for method, suffix, summary in (
+    ("POST", "", "Publish a local recording part"),
+    ("GET", "", "List your published recording parts"),
+    ("GET", "/{recording_id}/signal", "Download your published signal"),
+):
+    errors = {
+        401: "Session expired or revoked",
+        502: "Recording service unavailable",
+        503: "Desktop publication is not configured",
+        504: "Recording service timed out",
+    }
+    if method == "POST":
+        errors.update(
+            {
+                403: "Desktop client session required for recording publication",
+                409: "Local recording identity conflicts with a previous publication",
+                413: "Request body is too large",
+            }
+        )
+    if suffix:
+        errors[404] = "Recording not found"
+    GATEWAY[method + " /cloud/v1/recordings" + suffix] = (
+        summary,
+        "Bearer-authenticated desktop synchronization. The gateway derives operator and client identity from the access session and replaces incoming identity headers. Publishing requires a desktop session and a non-reviewer operator. Samples retain their actual channel count and original half-open coordinates; same identity with different content returns 409.",
+        errors,
+    )
 
 CATALOG = {"data": DATA, "ml": ML, "recognition": RECOGNITION, "gateway": GATEWAY}

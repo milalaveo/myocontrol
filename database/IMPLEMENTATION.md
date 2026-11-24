@@ -2,13 +2,13 @@
 
 ## Accepted target versus existing schema
 
-The accepted [ADR-001](../docs/ARCHITECTURE_DECISIONS.md) now has additive persistence migrations: `identity/0001`, `data_protocol/0006`, `ml_experiments/0007` and `recognition/0003`. They add operator/client/session records, publication provenance/receipts, a generic run/model/package/evaluation registry and desktop reports. See the [teacher guide](README_TEACHER.md), [current logical diagrams](SERVICE_MODEL.md) and [generated service dictionary](SERVICE_DATA_DICTIONARY.md). HTTP identity, authenticated worker APIs and actual Electron synchronization remain application work; schema support does not establish a completed runtime.
+The accepted [ADR-001](../docs/ARCHITECTURE_DECISIONS.md) now has additive persistence migrations: `identity/0001`, `data_protocol/0006`, `ml_experiments/0007` and `recognition/0003`. They add operator/client/session records, publication provenance/receipts, a generic run/model/package/evaluation registry and desktop reports. See the [teacher guide](README_TEACHER.md), [current logical diagrams](SERVICE_MODEL.md) and [generated service dictionary](SERVICE_DATA_DICTIONARY.md). Operator authentication and desktop recording synchronization now have HTTP implementations. Authenticated workstation job/artifact APIs, model adaptation and terminal desktop-report synchronization remain application work; schema support alone does not establish a completed research runtime.
 
 This document describes the original `myoprosthesis` backend and its limits. Statements about missing APIs or workers below refer to that implementation. The current service schemas, migration setup and relationships are described in the [database overview](README.md), [data dictionary](DATA_DICTIONARY.md) and [logical model](LOGICAL_MODEL.md). The database remains a research prototype; synthetic checks do not validate final research results or participant-data handling.
 
 ## Additive service database acceptance — 23 November 2026
 
-- Four new migrations extend, rather than rewrite, the 13 previously applied service migrations; the migrator now records 17 checksummed revisions.
+- Five additive migrations extend the 13 previously applied service migrations; the migrator now records 18 checksummed revisions. Data revision 0007 preserves actual channel count (default four) and operator/local-part uniqueness across client rotation.
 - Identity, original-source recording metadata/client receipts, general model/adaptation-package registry, worker leases, mathematically checked evaluations and terminal desktop reports are implemented in SQL.
 - Verified locally on an isolated PostgreSQL 16.3: clean migration, repeat migration, upgrade preserving existing participant/queued LDA rows, generated-DDL restoration, 18 acceptance tests (including concurrent claims), and existing Data/ML/Recognition test suites.
 - CI now includes the same migrations/upgrade/acceptance/DDL checks on PostgreSQL 18. A CI configuration change is not a claim that the remote job has already passed.

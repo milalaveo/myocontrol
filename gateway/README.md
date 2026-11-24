@@ -40,7 +40,7 @@ Argon2id password hashes and SHA-256 digests of high-entropy session tokens are 
 
 `GET /cloud/v1/{runs|models|results}` and `GET /cloud/v1/{runs|models|results}/{uuid}` require a bearer session. All roles/scopes currently read only their own operator's records. Lists accept `limit` (1–100, default 50) and `offset` (default 0), returning `{items,next_offset}`. Result detail includes confusion counts. Foreign IDs return 404. No lease digests or raw storage paths are exposed. Browser-supplied internal identity headers are ignored; the gateway supplies its validated context to ML.
 
-This is the first read-only cloud slice. Generic run submission, claim/heartbeat/result publication, verified package upload/download and desktop report/recording synchronization are not implemented yet. The existing synthetic LDA worker still processes its original development tables via direct DB access. It is not a remote workstation delivery mechanism.
+This is the first read-only cloud slice. Generic run submission, claim/heartbeat/result publication, verified package upload/download and terminal desktop-report synchronization are not implemented yet. Recording synchronization is implemented separately at `/cloud/v1/recordings`; see the [recording tutorial](../api/tutorials/DESKTOP_RECORDINGS.md). The existing synthetic LDA worker still processes its original development tables via direct DB access. It is not a remote workstation delivery mechanism.
 
 ## Legacy development routes
 

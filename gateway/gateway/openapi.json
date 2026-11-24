@@ -396,6 +396,129 @@
         "title": "CalibrationResponse",
         "type": "object"
       },
+      "Data_ClientRecordingCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "channel_map": {
+            "items": {
+              "type": "integer"
+            },
+            "maxItems": 6,
+            "minItems": 1,
+            "title": "Channel Map",
+            "type": "array"
+          },
+          "gesture_code": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Za-z0-9_-]{1,100}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gesture Code"
+          },
+          "local_recording_id": {
+            "format": "uuid",
+            "title": "Local Recording Id",
+            "type": "string"
+          },
+          "original_sha256": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Original Sha256",
+            "type": "string"
+          },
+          "original_signal_key": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Original Signal Key",
+            "type": "string"
+          },
+          "original_start_sample": {
+            "minimum": 0.0,
+            "title": "Original Start Sample",
+            "type": "integer"
+          },
+          "participant_key": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Participant Key",
+            "type": "string"
+          },
+          "purpose": {
+            "default": "research",
+            "enum": [
+              "research",
+              "calibration"
+            ],
+            "title": "Purpose",
+            "type": "string"
+          },
+          "sample_rate_hz": {
+            "maximum": 100000.0,
+            "minimum": 1.0,
+            "title": "Sample Rate Hz",
+            "type": "number"
+          },
+          "samples": {
+            "items": {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            "maxItems": 10000,
+            "minItems": 1,
+            "title": "Samples",
+            "type": "array"
+          },
+          "source_kind": {
+            "enum": [
+              "synthetic",
+              "dataset",
+              "device"
+            ],
+            "title": "Source Kind",
+            "type": "string"
+          },
+          "source_name": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Source Name",
+            "type": "string"
+          },
+          "source_version": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Source Version",
+            "type": "string"
+          },
+          "units": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Units",
+            "type": "string"
+          }
+        },
+        "required": [
+          "local_recording_id",
+          "participant_key",
+          "sample_rate_hz",
+          "channel_map",
+          "samples",
+          "source_kind",
+          "source_name",
+          "source_version",
+          "units",
+          "original_signal_key",
+          "original_sha256",
+          "original_start_sample"
+        ],
+        "title": "ClientRecordingCreate",
+        "type": "object"
+      },
       "Data_HTTPValidationError": {
         "properties": {
           "detail": {
@@ -502,6 +625,185 @@
           "checksum"
         ],
         "title": "ManifestResponse",
+        "type": "object"
+      },
+      "Data_OwnedRecording": {
+        "properties": {
+          "artifact_sha256": {
+            "title": "Artifact Sha256",
+            "type": "string"
+          },
+          "channel_count": {
+            "title": "Channel Count",
+            "type": "integer"
+          },
+          "channel_map": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Channel Map",
+            "type": "array"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "local_recording_id": {
+            "format": "uuid",
+            "title": "Local Recording Id",
+            "type": "string"
+          },
+          "original_end_sample": {
+            "title": "Original End Sample",
+            "type": "integer"
+          },
+          "original_sha256": {
+            "title": "Original Sha256",
+            "type": "string"
+          },
+          "original_signal_key": {
+            "title": "Original Signal Key",
+            "type": "string"
+          },
+          "original_start_sample": {
+            "title": "Original Start Sample",
+            "type": "integer"
+          },
+          "received_at": {
+            "format": "date-time",
+            "title": "Received At",
+            "type": "string"
+          },
+          "sample_count": {
+            "title": "Sample Count",
+            "type": "integer"
+          },
+          "sample_rate_hz": {
+            "title": "Sample Rate Hz",
+            "type": "number"
+          },
+          "source_kind": {
+            "title": "Source Kind",
+            "type": "string"
+          },
+          "source_name": {
+            "title": "Source Name",
+            "type": "string"
+          },
+          "source_participant_key": {
+            "title": "Source Participant Key",
+            "type": "string"
+          },
+          "source_version": {
+            "title": "Source Version",
+            "type": "string"
+          },
+          "units": {
+            "title": "Units",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "local_recording_id",
+          "sample_rate_hz",
+          "sample_count",
+          "channel_count",
+          "artifact_sha256",
+          "source_kind",
+          "source_name",
+          "source_version",
+          "source_participant_key",
+          "original_signal_key",
+          "original_sha256",
+          "original_start_sample",
+          "original_end_sample",
+          "channel_map",
+          "units",
+          "received_at"
+        ],
+        "title": "OwnedRecording",
+        "type": "object"
+      },
+      "Data_OwnedRecordingPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/Data_OwnedRecording"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_offset": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Offset"
+          }
+        },
+        "required": [
+          "items",
+          "next_offset"
+        ],
+        "title": "OwnedRecordingPage",
+        "type": "object"
+      },
+      "Data_OwnedSignal": {
+        "properties": {
+          "channel_map": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Channel Map",
+            "type": "array"
+          },
+          "sample_rate_hz": {
+            "title": "Sample Rate Hz",
+            "type": "number"
+          },
+          "samples": {
+            "items": {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            "title": "Samples",
+            "type": "array"
+          },
+          "source_kind": {
+            "title": "Source Kind",
+            "type": "string"
+          },
+          "source_name": {
+            "title": "Source Name",
+            "type": "string"
+          },
+          "source_version": {
+            "title": "Source Version",
+            "type": "string"
+          },
+          "units": {
+            "title": "Units",
+            "type": "string"
+          }
+        },
+        "required": [
+          "sample_rate_hz",
+          "channel_map",
+          "units",
+          "source_kind",
+          "source_name",
+          "source_version",
+          "samples"
+        ],
+        "title": "OwnedSignal",
         "type": "object"
       },
       "Data_ParticipantAssignment": {
@@ -655,6 +957,43 @@
         "title": "ProtocolResponse",
         "type": "object"
       },
+      "Data_PublicationReceipt": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "local_recording_id": {
+            "format": "uuid",
+            "title": "Local Recording Id",
+            "type": "string"
+          },
+          "payload_sha256": {
+            "title": "Payload Sha256",
+            "type": "string"
+          },
+          "received_at": {
+            "format": "date-time",
+            "title": "Received At",
+            "type": "string"
+          },
+          "recording_id": {
+            "format": "uuid",
+            "title": "Recording Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "recording_id",
+          "local_recording_id",
+          "payload_sha256",
+          "received_at"
+        ],
+        "title": "PublicationReceipt",
+        "type": "object"
+      },
       "Data_RecordingCreate": {
         "properties": {
           "participant_id": {
@@ -708,6 +1047,10 @@
             "title": "Artifact Sha256",
             "type": "string"
           },
+          "channel_count": {
+            "title": "Channel Count",
+            "type": "integer"
+          },
           "id": {
             "format": "uuid",
             "title": "Id",
@@ -732,7 +1075,8 @@
           "participant_id",
           "sample_rate_hz",
           "sample_count",
-          "artifact_sha256"
+          "artifact_sha256",
+          "channel_count"
         ],
         "title": "RecordingResponse",
         "type": "object"
@@ -4508,6 +4852,911 @@
         ]
       }
     },
+    "/cloud/v1/recordings": {
+      "get": {
+        "description": "Bearer-authenticated desktop synchronization. The gateway derives operator and client identity from the access session and replaces incoming identity headers. Publishing requires a desktop session and a non-reviewer operator. Samples retain their actual channel count and original half-open coordinates; same identity with different content returns 409.",
+        "operationId": "listing_cloud_v1_recordings_get",
+        "parameters": [
+          {
+            "example": 25,
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "example": 0,
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "items": [
+                    {
+                      "artifact_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                      "channel_count": 4,
+                      "channel_map": [
+                        0,
+                        1,
+                        2,
+                        3
+                      ],
+                      "id": "00000000-0000-4000-8000-000000000002",
+                      "local_recording_id": "00000000-0000-4000-8000-000000000031",
+                      "original_end_sample": 2,
+                      "original_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                      "original_signal_key": "00000000-0000-4000-8000-000000000030",
+                      "original_start_sample": 0,
+                      "received_at": "2026-11-24T10:00:00Z",
+                      "sample_count": 2,
+                      "sample_rate_hz": 1000,
+                      "source_kind": "synthetic",
+                      "source_name": "tutorial",
+                      "source_participant_key": "tutorial-local",
+                      "source_version": "1",
+                      "units": "arbitrary"
+                    }
+                  ],
+                  "next_offset": null
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Data_OwnedRecordingPage"
+                }
+              }
+            },
+            "description": "Successful Response",
+            "headers": {
+              "X-Correlation-ID": {
+                "description": "Request correlation identifier, generated when no valid incoming identifier is supplied.",
+                "example": "tutorial-request-1",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Session expired or revoked"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Session expired or revoked",
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Bearer for operator routes; Basic for development proxy routes when a challenge is returned.",
+                "example": "Bearer",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Correlation-ID": {
+                "description": "Request correlation identifier, generated when no valid incoming identifier is supplied.",
+                "example": "tutorial-request-1",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "validation": {
+                    "value": {
+                      "detail": [
+                        {
+                          "loc": [
+                            "query",
+                            "limit"
+                          ],
+                          "msg": "Input should be less than or equal to 100",
+                          "type": "less_than_equal"
+                        }
+                      ]
+                    }
+                  }
+                },
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/HTTPValidationError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ApiError"
+                    }
+                  ]
+                }
+              }
+            },
+            "description": "Input validation failed. Framework validation uses a detail array; explicit application validation can return a detail string.",
+            "headers": {
+              "X-Correlation-ID": {
+                "description": "Request correlation identifier, generated when no valid incoming identifier is supplied.",
+                "example": "tutorial-request-1",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Rate limit exceeded"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Rate limit exceeded",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the current rate-limit window resets.",
+                "example": "30",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Correlation-ID": {
+                "description": "Request correlation identifier, generated when no valid incoming identifier is supplied.",
+                "example": "tutorial-request-1",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Internal server error"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Internal server error",
+            "headers": {
+              "X-Correlation-ID": {
+                "description": "Request correlation identifier, generated when no valid incoming identifier is supplied.",
+                "example": "tutorial-request-1",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Recording service unavailable"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Recording service unavailable",
+            "headers": {
+              "X-Correlation-ID": {
+                "description": "Request correlation identifier, generated when no valid incoming identifier is supplied.",
+                "example": "tutorial-request-1",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Desktop publication is not configured"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Desktop publication is not configured",
+            "headers": {
+              "X-Correlation-ID": {
+                "description": "Request correlation identifier, generated when no valid incoming identifier is supplied.",
+                "example": "tutorial-request-1",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "504": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Recording service timed out"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Recording service timed out",
+            "headers": {
+              "X-Correlation-ID": {
+                "description": "Request correlation identifier, generated when no valid incoming identifier is supplied.",
+                "example": "tutorial-request-1",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OperatorBearer": []
+          }
+        ],
+        "summary": "List your published recording parts",
+        "tags": [
+          "desktop recordings"
+        ]
+      },
+      "post": {
+        "description": "Bearer-authenticated desktop synchronization. The gateway derives operator and client identity from the access session and replaces incoming identity headers. Publishing requires a desktop session and a non-reviewer operator. Samples retain their actual channel count and original half-open coordinates; same identity with different content returns 409.",
+        "operationId": "publish_cloud_v1_recordings_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "example": {
+                "channel_map": [
+                  0,
+                  1,
+                  2,
+                  3
+                ],
+                "gesture_code": null,
+                "local_recording_id": "00000000-0000-4000-8000-000000000031",
+                "original_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                "original_signal_key": "00000000-0000-4000-8000-000000000030",
+                "original_start_sample": 0,
+                "participant_key": "tutorial-local",
+                "purpose": "research",
+                "sample_rate_hz": 1000,
+                "samples": [
+                  [
+                    1,
+                    2,
+                    3,
+                    4
+                  ],
+                  [
+                    2,
+                    3,
+                    4,
+                    5
+                  ]
+                ],
+                "source_kind": "synthetic",
+                "source_name": "tutorial",
+                "source_version": "1",
+                "units": "arbitrary"
+              },
+              "schema": {
+                "$ref": "#/components/schemas/Data_ClientRecordingCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "id": "00000000-0000-4000-8000-000000000032",
+                  "local_recording_id": "00000000-0000-4000-8000-000000000031",
+                  "payload_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                  "received_at": "2026-11-24T10:00:00Z",
+                  "recording_id": "00000000-0000-4000-8000-000000000002"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Data_PublicationReceipt"
+                }
+              }
+            },
+            "description": "Successful Response",
+            "headers": {
+              "X-Correlation-ID": {
+                "description": "Request correlation identifier, generated when no valid incoming identifier is supplied.",
+                "example": "tutorial-request-1",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Session expired or revoked"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Session expired or revoked",
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Bearer for operator routes; Basic for development proxy routes when a challenge is returned.",
+                "example": "Bearer",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Correlation-ID": {
+                "description": "Request correlation identifier, generated when no valid incoming identifier is supplied.",
+                "example": "tutorial-request-1",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Desktop client session required for recording publication"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Desktop client session required for recording publication",
+            "headers": {
+              "X-Correlation-ID": {
+                "description": "Request correlation identifier, generated when no valid incoming identifier is supplied.",
+                "example": "tutorial-request-1",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Local recording identity conflicts with a previous publication"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Local recording identity conflicts with a previous publication",
+            "headers": {
+              "X-Correlation-ID": {
+                "description": "Request correlation identifier, generated when no valid incoming identifier is supplied.",
+                "example": "tutorial-request-1",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Request body is too large"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Request body is too large",
+            "headers": {
+              "X-Correlation-ID": {
+                "description": "Request correlation identifier, generated when no valid incoming identifier is supplied.",
+                "example": "tutorial-request-1",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "validation": {
+                    "value": {
+                      "detail": [
+                        {
+                          "loc": [
+                            "body",
+                            "local_recording_id"
+                          ],
+                          "msg": "Field required",
+                          "type": "missing"
+                        }
+                      ]
+                    }
+                  }
+                },
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/Data_HTTPValidationError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Data_ApiError"
+                    }
+                  ]
+                }
+              }
+            },
+            "description": "Input validation failed. Framework validation uses a detail array; explicit application validation can return a detail string.",
+            "headers": {
+              "X-Correlation-ID": {
+                "description": "Request correlation identifier, generated when no valid incoming identifier is supplied.",
+                "example": "tutorial-request-1",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Rate limit exceeded"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Rate limit exceeded",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the current rate-limit window resets.",
+                "example": "30",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Correlation-ID": {
+                "description": "Request correlation identifier, generated when no valid incoming identifier is supplied.",
+                "example": "tutorial-request-1",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Internal server error"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Internal server error",
+            "headers": {
+              "X-Correlation-ID": {
+                "description": "Request correlation identifier, generated when no valid incoming identifier is supplied.",
+                "example": "tutorial-request-1",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Recording service unavailable"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Recording service unavailable",
+            "headers": {
+              "X-Correlation-ID": {
+                "description": "Request correlation identifier, generated when no valid incoming identifier is supplied.",
+                "example": "tutorial-request-1",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Desktop publication is not configured"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Desktop publication is not configured",
+            "headers": {
+              "X-Correlation-ID": {
+                "description": "Request correlation identifier, generated when no valid incoming identifier is supplied.",
+                "example": "tutorial-request-1",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "504": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Recording service timed out"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Recording service timed out",
+            "headers": {
+              "X-Correlation-ID": {
+                "description": "Request correlation identifier, generated when no valid incoming identifier is supplied.",
+                "example": "tutorial-request-1",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OperatorBearer": []
+          }
+        ],
+        "summary": "Publish a local recording part",
+        "tags": [
+          "desktop recordings"
+        ]
+      }
+    },
+    "/cloud/v1/recordings/{recording_id}/signal": {
+      "get": {
+        "description": "Bearer-authenticated desktop synchronization. The gateway derives operator and client identity from the access session and replaces incoming identity headers. Publishing requires a desktop session and a non-reviewer operator. Samples retain their actual channel count and original half-open coordinates; same identity with different content returns 409.",
+        "operationId": "signal_cloud_v1_recordings__recording_id__signal_get",
+        "parameters": [
+          {
+            "example": "00000000-0000-4000-8000-000000000002",
+            "in": "path",
+            "name": "recording_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Recording Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "channel_map": [
+                    0,
+                    1,
+                    2,
+                    3
+                  ],
+                  "sample_rate_hz": 1000,
+                  "samples": [
+                    [
+                      1,
+                      2,
+                      3,
+                      4
+                    ],
+                    [
+                      2,
+                      3,
+                      4,
+                      5
+                    ]
+                  ],
+                  "source_kind": "synthetic",
+                  "source_name": "tutorial",
+                  "source_version": "1",
+                  "units": "arbitrary"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Data_OwnedSignal"
+                }
+              }
+            },
+            "description": "Successful Response",
+            "headers": {
+              "X-Correlation-ID": {
+                "description": "Request correlation identifier, generated when no valid incoming identifier is supplied.",
+                "example": "tutorial-request-1",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Session expired or revoked"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Session expired or revoked",
+            "headers": {
+              "WWW-Authenticate": {
+                "description": "Bearer for operator routes; Basic for development proxy routes when a challenge is returned.",
+                "example": "Bearer",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Correlation-ID": {
+                "description": "Request correlation identifier, generated when no valid incoming identifier is supplied.",
+                "example": "tutorial-request-1",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Recording not found"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Recording not found",
+            "headers": {
+              "X-Correlation-ID": {
+                "description": "Request correlation identifier, generated when no valid incoming identifier is supplied.",
+                "example": "tutorial-request-1",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "validation": {
+                    "value": {
+                      "detail": [
+                        {
+                          "loc": [
+                            "path",
+                            "recording_id"
+                          ],
+                          "msg": "Input should be a valid UUID",
+                          "type": "uuid_parsing"
+                        }
+                      ]
+                    }
+                  }
+                },
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/HTTPValidationError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ApiError"
+                    }
+                  ]
+                }
+              }
+            },
+            "description": "Input validation failed. Framework validation uses a detail array; explicit application validation can return a detail string.",
+            "headers": {
+              "X-Correlation-ID": {
+                "description": "Request correlation identifier, generated when no valid incoming identifier is supplied.",
+                "example": "tutorial-request-1",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Rate limit exceeded"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Rate limit exceeded",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the current rate-limit window resets.",
+                "example": "30",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Correlation-ID": {
+                "description": "Request correlation identifier, generated when no valid incoming identifier is supplied.",
+                "example": "tutorial-request-1",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Internal server error"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Internal server error",
+            "headers": {
+              "X-Correlation-ID": {
+                "description": "Request correlation identifier, generated when no valid incoming identifier is supplied.",
+                "example": "tutorial-request-1",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Recording service unavailable"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Recording service unavailable",
+            "headers": {
+              "X-Correlation-ID": {
+                "description": "Request correlation identifier, generated when no valid incoming identifier is supplied.",
+                "example": "tutorial-request-1",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Desktop publication is not configured"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Desktop publication is not configured",
+            "headers": {
+              "X-Correlation-ID": {
+                "description": "Request correlation identifier, generated when no valid incoming identifier is supplied.",
+                "example": "tutorial-request-1",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "504": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Recording service timed out"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Recording service timed out",
+            "headers": {
+              "X-Correlation-ID": {
+                "description": "Request correlation identifier, generated when no valid incoming identifier is supplied.",
+                "example": "tutorial-request-1",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OperatorBearer": []
+          }
+        ],
+        "summary": "Download your published signal",
+        "tags": [
+          "desktop recordings"
+        ]
+      }
+    },
     "/cloud/v1/results": {
       "get": {
         "description": "Bearer-authenticated owner-filtered collection: runs, models or results. limit 1–100, offset >= 0. Empty collections return items=[] and next_offset=null. Legacy synthetic LDA runs are not automatically backfilled.",
@@ -8162,6 +9411,7 @@
                 "example": [
                   {
                     "artifact_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                    "channel_count": 4,
                     "id": "00000000-0000-4000-8000-000000000002",
                     "participant_id": "00000000-0000-4000-8000-000000000001",
                     "sample_count": 2,
@@ -8405,6 +9655,7 @@
               "application/json": {
                 "example": {
                   "artifact_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                  "channel_count": 4,
                   "id": "00000000-0000-4000-8000-000000000002",
                   "participant_id": "00000000-0000-4000-8000-000000000001",
                   "sample_count": 2,
@@ -8652,6 +9903,7 @@
               "application/json": {
                 "example": {
                   "artifact_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                  "channel_count": 4,
                   "id": "00000000-0000-4000-8000-000000000002",
                   "participant_id": "00000000-0000-4000-8000-000000000001",
                   "sample_count": 2,
@@ -8965,6 +10217,28 @@
               }
             },
             "description": "Recording not found",
+            "headers": {
+              "X-Correlation-ID": {
+                "description": "Request correlation identifier, generated when no valid incoming identifier is supplied.",
+                "example": "tutorial-request-1",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Legacy signal endpoint requires four channels; use the owned cloud signal endpoint"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Data_ApiError"
+                }
+              }
+            },
+            "description": "Legacy signal endpoint requires four channels; use the owned cloud signal endpoint",
             "headers": {
               "X-Correlation-ID": {
                 "description": "Request correlation identifier, generated when no valid incoming identifier is supplied.",

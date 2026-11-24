@@ -1,0 +1,13 @@
+# Synchronize a desktop recording
+
+Start the gateway and create an operator as described in [Getting Started](../GETTING_STARTED.md). Use [operator/client provisioning](CLOUD_ACCESS.md) to obtain a `desktop` client bearer token. A web session may list/download owned records, but cannot publish them; a training-worker token cannot publish them either.
+
+1. Capture/import a recording in Electron, then sign in under Cloud sync. The app provisions a scoped desktop session. Token material never enters the renderer.
+2. Select Sync in Recordings. The durable local outbox posts parts of at most 10,000 samples to `POST /cloud/v1/recordings`. The [OpenAPI example](../../gateway/gateway/openapi.json) contains a complete synthetic body: local part UUID, pseudonym, sample rate, ordered channels, samples, source kind/name/version/units, parent original identity/hash and original start coordinate. Calibration parts also include their gesture label.
+3. A `201` receipt includes cloud recording UUID, local part UUID, canonical payload SHA-256 and receipt time. Save the receipt before marking the outbox item synced. Repeating the same operator/local UUID and identical payload returns the same receipt, even after registering a new desktop client. Changed content returns `409`; do not generate a new identity to hide the conflict.
+4. Call `GET /cloud/v1/recordings?limit=50&offset=0` with the operator's bearer token to inspect published parts. Follow `next_offset` until null. Each result includes channel count, ordered mapping and original half-open coordinates.
+5. Call `GET /cloud/v1/recordings/{recording_id}/signal` to download the actual samples. The service verifies its stored artifact checksum first. A foreign or missing record returns `404`. A two-channel source returns two values per sample; it is not converted to the legacy four-channel format.
+
+The gateway replaces incoming identity headers with verified session context. Private `/v1/client-recordings` service routes are blocked by the development Basic proxy. Source checksums are client attestations; this API does not independently prove sensor origin or make uploaded data eligible for a research split. Existing manifest/calibration allocation rules still apply.
+
+Offline/network failures and server errors retain pending uploads with bounded exponential backoff; authentication errors require signing in again. Conflict/rejected states require inspection. The desktop keeps local originals after successful synchronization. Model/result publication and terminal session-report synchronization are outside this recording API.

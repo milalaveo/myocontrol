@@ -32,12 +32,14 @@ from .schemas import (
     CalibrationDetailResponse,
 )
 from .models import SyntheticSplit
+from .publications import router as publications_router
 from .storage import read_signal, save_signal
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 logger = logging.getLogger("data_protocol")
 logger.setLevel(logging.INFO)
 app = FastAPI(title="Data and Protocol API", version="0.1.0")
+app.include_router(publications_router)
 app.mount("/metrics", make_asgi_app())
 REQUESTS = Counter("data_protocol_requests_total", "HTTP requests", ["method", "route", "status"])
 LATENCY = Histogram("data_protocol_request_seconds", "HTTP request duration", ["method", "route"])
@@ -76,6 +78,7 @@ class RecordingResponse(BaseModel):
     sample_rate_hz: float
     sample_count: int
     artifact_sha256: str
+    channel_count: int
 
 
 class SyntheticSplitCreate(BaseModel):
@@ -299,6 +302,8 @@ def get_recording_signal(recording_id: uuid.UUID, session: Session = Depends(get
     recording = RecordingRepository(session).get(recording_id)
     if recording is None:
         raise HTTPException(status_code=404, detail="Recording not found")
+    if recording.channel_count != 4:
+        raise HTTPException(status_code=409, detail="Legacy signal endpoint requires four channels; use the owned cloud signal endpoint")
     try:
         payload = json.loads(read_signal(recording.artifact_sha256))
     except (OSError, ValueError) as error:

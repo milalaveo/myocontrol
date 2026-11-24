@@ -1,0 +1,98 @@
+{
+  "name": "myocontrol-desktop",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Local MyoControl acquisition, replay and recognition desktop application",
+  "author": "MyoControl",
+  "main": "dist-electron/main.js",
+  "scripts": {
+    "dev": "npm run build:main && node scripts/dev.mjs",
+    "build:main": "tsc -p tsconfig.electron.json",
+    "build": "tsc --noEmit -p tsconfig.json && npm run build:main && vite build",
+    "setup:runtime": "node scripts/setup-runtime.mjs",
+    "build:runtime": "node scripts/build-runtime.mjs",
+    "package": "npm run build && npm run build:runtime && electron-builder --dir --publish never",
+    "dist": "npm run build && npm run build:runtime && electron-builder --publish never",
+    "start": "electron .",
+    "test:e2e": "playwright test",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.65.1",
+    "@types/node": "^24.19.2",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "@types/three": "^0.183.0",
+    "@vitejs/plugin-react": "^5.1.0",
+    "electron": "^45.4.1",
+    "electron-builder": "^26.18.0",
+    "prettier": "^3.10.1",
+    "sass": "^1.108.2",
+    "typescript": "^5.9.3",
+    "vite": "^7.3.0",
+    "@carbon/icons-react": "^11.92.0",
+    "@carbon/react": "^1.121.0",
+    "@react-three/fiber": "^9.5.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "three": "^0.183.0",
+    "uplot": "^1.6.32"
+  },
+  "build": {
+    "appId": "org.myocontrol.desktop",
+    "productName": "MyoControl",
+    "asar": true,
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "build/runtime/myocontrol-runtime",
+        "to": "runtime",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": "../local-runtime/fixtures",
+        "to": "fixtures",
+        "filter": [
+          "*.json"
+        ]
+      }
+    ],
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "artifactName": "MyoControl-${version}-${arch}-setup.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "perMachine": false
+    },
+    "mac": {
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "category": "public.app-category.education",
+      "identity": null
+    },
+    "linux": {
+      "target": [
+        "AppImage"
+      ],
+      "category": "Education"
+    }
+  }
+}

@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "myocontrol-runtime"
+version = "0.1.0"
+description = "Local acquisition, recording and recognition runtime for MyoControl Desktop"
+requires-python = ">=3.12"
+dependencies = ["numpy==2.2.6", "pyserial==3.5"]
+
+[project.scripts]
+myocontrol-runtime = "myocontrol_runtime.__main__:main"
+
+[tool.setuptools.packages.find]
+include = ["myocontrol_runtime*"]

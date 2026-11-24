@@ -99,7 +99,9 @@ def decorate(name, spec):
             "description": "Local development; domain-service ports are internal in Compose. Use the gateway contract for host access.",
         }
     ]
-    spec.setdefault("components", {}).setdefault("schemas", {})["ApiError"] = ERROR_SCHEMA
+    spec.setdefault("components", {}).setdefault("schemas", {})[
+        "ApiError"
+    ] = ERROR_SCHEMA
     for path, item in spec["paths"].items():
         for method, operation in item.items():
             if method not in METHODS:
@@ -116,14 +118,18 @@ def decorate(name, spec):
                     if path.endswith("live")
                     else "Executes a read-only database query. A successful liveness response alone does not prove readiness."
                 )
-                errors = {} if path.endswith("live") else {503: "Database operation failed"}
+                errors = (
+                    {} if path.endswith("live") else {503: "Database operation failed"}
+                )
             else:
                 if key not in CATALOG[name]:
                     raise ValueError(f"Undocumented operation: {name} {key}")
                 summary, description, errors = CATALOG[name][key]
             operation["summary"], operation["description"] = summary, description
             operation["tags"] = (
-                ["health"] if path.startswith("/health/") else operation.get("tags", [name])
+                ["health"]
+                if path.startswith("/health/")
+                else operation.get("tags", [name])
             )
             operation.setdefault("responses", {})["500"] = error_response(
                 500, "Internal server error"
@@ -142,9 +148,13 @@ def decorate(name, spec):
                 )
             for status, message in errors.items():
                 if status != 422:
-                    operation["responses"][str(status)] = error_response(status, message)
+                    operation["responses"][str(status)] = error_response(
+                        status, message
+                    )
             if name == "gateway" and not path.startswith("/health/"):
-                operation["responses"]["429"] = error_response(429, "Rate limit exceeded")
+                operation["responses"]["429"] = error_response(
+                    429, "Rate limit exceeded"
+                )
             for parameter in operation.get("parameters", []):
                 field = parameter["name"]
                 if field in {"collection"}:
@@ -196,15 +206,22 @@ def decorate(name, spec):
                         validation_example = {
                             "detail": [
                                 {
-                                    "loc": [uuid_parameter["in"], uuid_parameter["name"]],
+                                    "loc": [
+                                        uuid_parameter["in"],
+                                        uuid_parameter["name"],
+                                    ],
                                     "msg": "Input should be a valid UUID",
                                     "type": "uuid_parsing",
                                 }
                             ]
                         }
                     elif "requestBody" in operation:
-                        schema = operation["requestBody"]["content"]["application/json"]["schema"]
-                        model = spec["components"]["schemas"][schema["$ref"].rsplit("/", 1)[1]]
+                        schema = operation["requestBody"]["content"][
+                            "application/json"
+                        ]["schema"]
+                        model = spec["components"]["schemas"][
+                            schema["$ref"].rsplit("/", 1)[1]
+                        ]
                         validation_example = {
                             "detail": [
                                 {
@@ -218,7 +235,9 @@ def decorate(name, spec):
                         "application/json": {
                             "schema": {
                                 "anyOf": [
-                                    {"$ref": "#/components/schemas/HTTPValidationError"},
+                                    {
+                                        "$ref": "#/components/schemas/HTTPValidationError"
+                                    },
                                     {"$ref": "#/components/schemas/ApiError"},
                                 ]
                             },
@@ -244,7 +263,9 @@ def decorate(name, spec):
                         if path.endswith("/health/ready"):
                             media["example"]["status"] = "ready"
                     if status == "204":
-                        response["description"] = "Revoked successfully; no response body."
+                        response["description"] = (
+                            "Revoked successfully; no response body."
+                        )
             if key == "POST /v1/source-lda-experiments":
                 operation["responses"]["202"]["headers"]["Location"] = {
                     "schema": {"type": "string"},
@@ -286,7 +307,9 @@ def namespaced(spec, prefix):
         if isinstance(value, dict):
             for key, item in value.items():
                 if key == "$ref" and item.startswith("#/components/schemas/"):
-                    value[key] = "#/components/schemas/" + prefix + item.rsplit("/", 1)[1]
+                    value[key] = (
+                        "#/components/schemas/" + prefix + item.rsplit("/", 1)[1]
+                    )
                 else:
                     rewrite(item)
         elif isinstance(value, list):
@@ -304,10 +327,42 @@ def public_contract(gateway, services):
     result = deepcopy(gateway)
     result["info"]["title"] = "MyoControl Gateway API"
     result["servers"] = [
-        {"url": "/", "description": "Same-origin gateway; normally http://127.0.0.1:8000"}
+        {
+            "url": "/",
+            "description": "Same-origin gateway; normally http://127.0.0.1:8000",
+        }
     ]
     ml = namespaced(services["ml"], "Ml_")
     result["components"]["schemas"].update(ml["components"]["schemas"])
+    data = namespaced(services["data"], "Data_")
+    result["components"]["schemas"].update(data["components"]["schemas"])
+    for suffix, method, status, model in (
+        ("", "post", "201", "PublicationReceipt"),
+        ("", "get", "200", "OwnedRecordingPage"),
+        ("/{recording_id}/signal", "get", "200", "OwnedSignal"),
+    ):
+        operation = result["paths"]["/cloud/v1/recordings" + suffix][method]
+        operation["responses"][status]["content"] = {
+            "application/json": {
+                "schema": {"$ref": "#/components/schemas/Data_" + model},
+                "example": deepcopy(MODELS[model]),
+            }
+        }
+        if method == "post":
+            operation["requestBody"] = {
+                "required": True,
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "$ref": "#/components/schemas/Data_ClientRecordingCreate"
+                        },
+                        "example": deepcopy(MODELS["ClientRecordingCreate"]),
+                    }
+                },
+            }
+            operation["responses"]["422"] = deepcopy(
+                data["paths"]["/v1/client-recordings"]["post"]["responses"]["422"]
+            )
     for suffix, model_names in (
         ("", ["RunPage", "ModelPage", "ResultPage"]),
         ("/{item_id}", ["RegistryRun", "PublishedModel", "EvaluationDetail"]),
@@ -322,8 +377,12 @@ def public_contract(gateway, services):
             for parameter in operation["parameters"]:
                 if parameter["name"] == "item_id":
                     parameter["example"] = MODELS[model]["id"]
-            operation["operationId"] = "cloud_" + collection + ("_detail" if suffix else "_list")
-            operation["summary"] = ("Read your " if suffix else "List your ") + collection
+            operation["operationId"] = (
+                "cloud_" + collection + ("_detail" if suffix else "_list")
+            )
+            operation["summary"] = (
+                "Read your " if suffix else "List your "
+            ) + collection
             operation["responses"]["200"]["content"] = {
                 "application/json": {
                     "schema": {"$ref": "#/components/schemas/Ml_" + model},
@@ -331,11 +390,18 @@ def public_contract(gateway, services):
                 }
             }
             result["paths"]["/cloud/v1/" + collection + suffix] = concrete
-    for name, prefix in (("data", "data"), ("ml", "experiments"), ("recognition", "recognition")):
+    for name, prefix in (
+        ("data", "data"),
+        ("ml", "experiments"),
+        ("recognition", "recognition"),
+    ):
         spec = namespaced(services[name], name.title() + "_")
         result["components"]["schemas"].update(spec["components"]["schemas"])
         for path, item in spec["paths"].items():
-            if path.startswith("/v1/registry/") or path == "/metrics/":
+            if (
+                path.startswith(("/v1/registry/", "/v1/client-recordings"))
+                or path == "/metrics/"
+            ):
                 continue
             item = deepcopy(item)
             for method, operation in item.items():
@@ -355,8 +421,12 @@ def public_contract(gateway, services):
                     503: "Service address is not configured",
                     504: "Service request timed out",
                 }.items():
-                    operation["responses"].setdefault(str(code), error_response(code, message))
-                operation["responses"]["401"]["headers"]["WWW-Authenticate"]["example"] = "Basic"
+                    operation["responses"].setdefault(
+                        str(code), error_response(code, message)
+                    )
+                operation["responses"]["401"]["headers"]["WWW-Authenticate"][
+                    "example"
+                ] = "Basic"
                 for response in operation["responses"].values():
                     location = response.get("headers", {}).get("Location")
                     if location:
@@ -378,9 +448,14 @@ def validate_contract(spec):
             if method not in METHODS:
                 continue
             count += 1
-            assert operation.get("summary") and operation.get("description"), (method, path)
+            assert operation.get("summary") and operation.get("description"), (
+                method,
+                path,
+            )
             media_sets = [operation.get("requestBody", {}).get("content", {})]
-            media_sets += [r.get("content", {}) for r in operation["responses"].values()]
+            media_sets += [
+                r.get("content", {}) for r in operation["responses"].values()
+            ]
             for media_set in media_sets:
                 for media in media_set.values():
                     assert media.get("schema"), (method, path, "empty schema")
@@ -406,7 +481,10 @@ def build():
         sys.path.insert(0, str(ROOT / directory))
         app = importlib.import_module(package + ".main").app
         spec = get_openapi(
-            title=app.title, version=app.version, openapi_version="3.1.0", routes=app.routes
+            title=app.title,
+            version=app.version,
+            openapi_version="3.1.0",
+            routes=app.routes,
         )
         specs[name] = decorate(name, spec)
         paths[name] = ROOT / directory / package / "openapi.json"

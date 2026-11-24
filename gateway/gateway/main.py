@@ -23,10 +23,12 @@ from sqlalchemy.exc import SQLAlchemyError
 from .schemas import HealthResponse
 from .identity import router as identity_router
 from .cloud import router as cloud_router
+from .desktop import router as desktop_router
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 app = FastAPI(title="Myocontrol Gateway", version="0.1.0")
 app.include_router(identity_router)
+app.include_router(desktop_router)
 app.include_router(cloud_router)
 app.mount("/metrics", make_asgi_app())
 REQUESTS = Counter("gateway_requests_total", "HTTP requests", ["method", "route", "status"])
@@ -158,7 +160,7 @@ def service_docs(service: str, username: str = Depends(authenticate)):
     include_in_schema=False,
 )
 async def proxy(service: str, path: str, request: Request, username: str = Depends(authenticate)):
-    if path == "v1/registry" or path.startswith("v1/registry/"):
+    if path == "v1/registry" or path.startswith("v1/registry/") or path.startswith("v1/client-recordings"):
         raise HTTPException(status_code=403, detail="Use operator-authenticated cloud routes")
     if (
         service not in SERVICES

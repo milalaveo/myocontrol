@@ -36,3 +36,7 @@ For a minimal recording request, first create a participant, then use its return
 ```
 
 Use another participant and different samples for the test recording. Submit both recording IDs to the synthetic split endpoint. This simplified split does not establish the data provenance required for experiments.
+
+## Desktop publications
+
+Private `/v1/client-recordings` routes accept gateway-authenticated publication of up to 10,000 samples per part, list owned metadata and return checksum-verified samples. The public entry is `/cloud/v1/recordings`; Basic proxy access to the private routes is blocked. Actual channel count defaults to four and is persisted (one to six); the legacy engineering ingestion and classifier contract remain four-channel. Idempotency is operator/local-part scoped and survives desktop client rotation. See the [tutorial](../../api/tutorials/DESKTOP_RECORDINGS.md) and [stored specification](data_protocol/openapi.json).

@@ -18,6 +18,7 @@ MEANINGS={
  'platform':'Registered client OS/architecture identity.', 'client_id':'Registered client identity; external outside identity service.',
  'token_sha256':'Digest of high-entropy token; raw token is not stored.', 'scope':'Web/desktop/worker access scope.',
  'issued_at':'Access-session issue time.', 'expires_at':'Access-session expiry time.', 'revoked_at':'Revocation time, immutable after revocation.',
+ 'channel_count':'Actual stored sample width (1-6), default four; no implicit channel padding.',
  'recording_id':'Recording reference; FK inside Data & Protocol, external in Recognition.',
  'source_kind':'Synthetic fixture, dataset or device origin.', 'source_name':'Origin dataset/device family.',
  'source_version':'Origin version; not overwritten by a later import.', 'source_participant_key':'Participant identifier within the declared source.',

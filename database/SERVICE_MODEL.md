@@ -33,7 +33,7 @@ erDiagram
     }
 ```
 
-Composite client/owner FK prevents a session from belonging to a different operator's device. Session scope must match the registered client kind. Credentials are digests/encoded hashes, not plaintext. Operator and client revocation remove sessions from `valid_session_ids`. HTTP token issuance and enforcement remain application work.
+Composite client/owner FK prevents a session from belonging to a different operator's device. Session scope must match the registered client kind. Credentials are digests/encoded hashes, not plaintext. Operator and client revocation remove sessions from `valid_session_ids`. The gateway implements token issuance and enforcement; legacy Basic routes remain a separate development boundary.
 
 ## Data & Protocol — existing research allocation and new publication provenance
 
@@ -54,7 +54,7 @@ erDiagram
     manifest_units ||--o{ calibration_items : eligible_unit
 ```
 
-`client_publications(operator_id, client_id, local_recording_id)` is unique. Identical retry returns the existing receipt; changed payload/recording is rejected. `recording_provenance` preserves source version, original identity/hash/coordinates and channel metadata. Legacy records are not automatically research-ready: the existing manifest format/checksums are not silently rewritten, and real-data identity/transformation validation still belongs to ingestion.
+`client_publications(operator_id, local_recording_id)` is unique across desktop client rotation; the original client-scoped constraint remains for compatibility. `recordings.channel_count` defaults to four and preserves actual widths from one to six. Identical retry returns the existing receipt; changed payload/recording is rejected. `recording_provenance` preserves source version, original identity/hash/coordinates and channel metadata. Legacy records are not automatically research-ready: the existing manifest format/checksums are not silently rewritten, and real-data identity/transformation validation still belongs to ingestion.
 
 ## ML Experiments — generic model and result registry
 

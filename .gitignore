@@ -40,3 +40,11 @@ node_modules/
 frontend/playwright-report/
 frontend/test-results/
 frontend/coverage/
+desktop/dist-electron/
+desktop/build/runtime/
+desktop/build/runtime-work/
+desktop/build/*.spec
+desktop/release/
+desktop/test-results/
+desktop/playwright-report/
+local-runtime/*.egg-info/

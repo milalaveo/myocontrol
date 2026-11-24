@@ -1,12 +1,12 @@
 # MyoControl API documentation
 
-This is the entry point for the API-documentation assessment. It covers the implemented operator/cloud APIs and the existing private development Data, ML and Recognition APIs. It does not claim that remote training, Electron synchronization or live acquisition APIs already exist.
+This is the entry point for the API-documentation assessment. It covers the implemented operator/cloud APIs and the existing private development Data, ML and Recognition APIs. It includes operator-owned desktop recording synchronization. Remote general-training APIs and terminal desktop-session report synchronization remain outside the implemented contract.
 
 ## Start here
 
 1. Follow [Getting Started](GETTING_STARTED.md) to generate private settings, start Docker Compose and create an operator.
 2. Open **[Swagger UI](http://127.0.0.1:8000/docs)** or **[ReDoc](http://127.0.0.1:8000/redoc)**. No deployment on an external server is required to review the saved files below.
-3. Follow [operator and client integration](tutorials/CLOUD_ACCESS.md), then optionally [synthetic research integration](tutorials/SYNTHETIC_RESEARCH.md).
+3. Follow [operator and client integration](tutorials/CLOUD_ACCESS.md), then [desktop recording synchronization](tutorials/DESKTOP_RECORDINGS.md) or optionally [synthetic research integration](tutorials/SYNTHETIC_RESEARCH.md).
 4. Use [error handling and access boundaries](ERRORS.md) when implementing a client.
 
 ## Versioned OpenAPI specifications
@@ -15,8 +15,8 @@ All files use **OpenAPI 3.1.0 JSON** and contain typed models, operation descrip
 
 | Contract | Stored file | Coverage |
 | --- | --- | --- |
-| Public gateway | [gateway/openapi.json](../gateway/gateway/openapi.json) | 49 operations, including concrete bearer-authenticated cloud routes, Basic-authenticated development proxy routes, health and metrics. |
-| Data & Protocol | [data/openapi.json](../services/data_protocol/data_protocol/openapi.json) | 24 private service operations. |
+| Public gateway | [gateway/openapi.json](../gateway/gateway/openapi.json) | 52 operations, including concrete bearer-authenticated cloud routes, Basic-authenticated development proxy routes, health and metrics. |
+| Data & Protocol | [data/openapi.json](../services/data_protocol/data_protocol/openapi.json) | 27 private service operations. |
 | ML Experiments | [ml/openapi.json](../services/ml_experiments/ml_experiments/openapi.json) | 10 private service operations, including internal owner-scoped registry access. |
 | Recognition | [recognition/openapi.json](../services/recognition/recognition/openapi.json) | 6 private service operations for development recording replay and operations. |
 

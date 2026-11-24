@@ -1,13 +1,16 @@
+-- Current service database: schema plus migration bookkeeping only. No account/research rows.
 --
 -- PostgreSQL database dump
 --
 
--- Dumped from database version 16.3
--- Dumped by pg_dump version 16.3
+
+-- Dumped from database version 18.7 (Debian 18.7-1.pgdg13+2)
+-- Dumped by pg_dump version 18.7 (Debian 18.7-1.pgdg13+2)
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
 SET idle_in_transaction_session_timeout = 0;
+SET transaction_timeout = 0;
 SET client_encoding = 'UTF8';
 SET standard_conforming_strings = on;
 SELECT pg_catalog.set_config('search_path', '', false);
@@ -42,6 +45,20 @@ COMMENT ON SCHEMA identity IS 'Cloud identity persistence; HTTP authentication a
 --
 
 CREATE SCHEMA ml_experiments;
+
+
+--
+-- Name: public; Type: SCHEMA; Schema: -; Owner: -
+--
+
+CREATE SCHEMA IF NOT EXISTS public;
+
+
+--
+-- Name: SCHEMA public; Type: COMMENT; Schema: -; Owner: -
+--
+
+COMMENT ON SCHEMA public IS 'standard public schema';
 
 
 --
@@ -835,10 +852,19 @@ CREATE TABLE data_protocol.recordings (
     sample_rate_hz numeric NOT NULL,
     sample_count integer NOT NULL,
     artifact_sha256 character varying(64) NOT NULL,
+    channel_count smallint DEFAULT 4 NOT NULL,
     CONSTRAINT recordings_artifact_sha256_check CHECK (((artifact_sha256)::text ~ '^[0-9a-f]{64}$'::text)),
+    CONSTRAINT recordings_channel_count_check CHECK (((channel_count >= 1) AND (channel_count <= 6))),
     CONSTRAINT recordings_sample_count_check CHECK (((sample_count >= 1) AND (sample_count <= 10000))),
     CONSTRAINT recordings_sample_rate_hz_check CHECK (((sample_rate_hz > (0)::numeric) AND (sample_rate_hz <= (100000)::numeric)))
 );
+
+
+--
+-- Name: COLUMN recordings.channel_count; Type: COMMENT; Schema: data_protocol; Owner: -
+--
+
+COMMENT ON COLUMN data_protocol.recordings.channel_count IS 'Actual stored sample width. Legacy ingestion and ML remain four-channel; desktop acquisition never pads missing channels.';
 
 
 --
@@ -1512,6 +1538,21 @@ ALTER TABLE ONLY data_protocol.calibration_subsets
 
 ALTER TABLE ONLY data_protocol.calibration_subsets
     ADD CONSTRAINT calibration_subsets_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: client_publications client_publication_operator_local_unique; Type: CONSTRAINT; Schema: data_protocol; Owner: -
+--
+
+ALTER TABLE ONLY data_protocol.client_publications
+    ADD CONSTRAINT client_publication_operator_local_unique UNIQUE (operator_id, local_recording_id);
+
+
+--
+-- Name: CONSTRAINT client_publication_operator_local_unique ON client_publications; Type: COMMENT; Schema: data_protocol; Owner: -
+--
+
+COMMENT ON CONSTRAINT client_publication_operator_local_unique ON data_protocol.client_publications IS 'Operator-owned local part identity survives desktop token/client rotation without duplicate publications.';
 
 
 --
@@ -2450,16 +2491,20 @@ ALTER TABLE ONLY ml_experiments.outbox_events
 -- PostgreSQL database dump complete
 --
 
+
+
 --
 -- PostgreSQL database dump
 --
 
--- Dumped from database version 16.3
--- Dumped by pg_dump version 16.3
+
+-- Dumped from database version 18.7 (Debian 18.7-1.pgdg13+2)
+-- Dumped by pg_dump version 18.7 (Debian 18.7-1.pgdg13+2)
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
 SET idle_in_transaction_session_timeout = 0;
+SET transaction_timeout = 0;
 SET client_encoding = 'UTF8';
 SET standard_conforming_strings = on;
 SELECT pg_catalog.set_config('search_path', '', false);
@@ -2472,23 +2517,24 @@ SET row_security = off;
 -- Data for Name: service_schema_migrations; Type: TABLE DATA; Schema: public; Owner: -
 --
 
-INSERT INTO public.service_schema_migrations (service, name, checksum, applied_at) VALUES ('identity', '0001_operators.sql', 'dc60ee1b626c5f7ca1c20d6242f19fa576177187c0f2876ba989204297638baa', '2026-11-23 21:25:33.162284+01');
-INSERT INTO public.service_schema_migrations (service, name, checksum, applied_at) VALUES ('data_protocol', '0001_participants.sql', '6853cc658ad0338ce06e8739fecd7ccd2282560abf78f643f8767be52d5d863b', '2026-11-23 21:25:33.162284+01');
-INSERT INTO public.service_schema_migrations (service, name, checksum, applied_at) VALUES ('data_protocol', '0002_recordings.sql', 'c797fabc72e4cdc54c50a4c6ad6b7d62481ee9bdec071c14ad626f5b8adf71f1', '2026-11-23 21:25:33.162284+01');
-INSERT INTO public.service_schema_migrations (service, name, checksum, applied_at) VALUES ('data_protocol', '0003_synthetic_splits.sql', '1a562688bd19f3d5502194c60c7eee4f404d23d8feb7087a66316f7d25660a2e', '2026-11-23 21:25:33.162284+01');
-INSERT INTO public.service_schema_migrations (service, name, checksum, applied_at) VALUES ('data_protocol', '0004_research_splits.sql', '8324dfa833f9af3bb8ff7ed67670ab51c573e5c4a8c75159e5b8d705b28b4567', '2026-11-23 21:25:33.162284+01');
-INSERT INTO public.service_schema_migrations (service, name, checksum, applied_at) VALUES ('data_protocol', '0005_calibration.sql', '48a8ccde1ac6f2d4725e0dd21522e13c3546ac0c94971584c626c6f34625f1c4', '2026-11-23 21:25:33.162284+01');
-INSERT INTO public.service_schema_migrations (service, name, checksum, applied_at) VALUES ('data_protocol', '0006_client_publication.sql', '92d88728b019a4cc1f5bb09b0359dbc33f8aabc904ade926b5a472eb23dc58ff', '2026-11-23 21:25:33.162284+01');
-INSERT INTO public.service_schema_migrations (service, name, checksum, applied_at) VALUES ('ml_experiments', '0001_summary_jobs.sql', '80f8480ad32f2eead3d0cd9160b9954d950ed6da02d8539e9f968f9c00648aea', '2026-11-23 21:25:33.162284+01');
-INSERT INTO public.service_schema_migrations (service, name, checksum, applied_at) VALUES ('ml_experiments', '0002_source_lda.sql', 'de0557008afc0659102873e978dafc19769c13538868b4fe3f07011bd700a12a', '2026-11-23 21:25:33.162284+01');
-INSERT INTO public.service_schema_migrations (service, name, checksum, applied_at) VALUES ('ml_experiments', '0003_model_checksum.sql', '4ec7b33966c124df0484c4911ceca1f1217513bebb526dd2a8035b5eda1b9342', '2026-11-23 21:25:33.162284+01');
-INSERT INTO public.service_schema_migrations (service, name, checksum, applied_at) VALUES ('ml_experiments', '0004_model_outbox.sql', '296be3ca06070145379c66ccf7ade293950557d724280904bc9238487c654c81', '2026-11-23 21:25:33.162284+01');
-INSERT INTO public.service_schema_migrations (service, name, checksum, applied_at) VALUES ('ml_experiments', '0005_experiment_jobs.sql', 'ba6f8dac74fc3309a1fcf400a9e0ad1f712edea36e936f52de2ebbb81cc64653', '2026-11-23 21:25:33.162284+01');
-INSERT INTO public.service_schema_migrations (service, name, checksum, applied_at) VALUES ('ml_experiments', '0006_trace_context.sql', 'a29b8b8e855ec4bcb9a1a5b7d78dd51a1650596cdbb2020133e4fab7c2f708b9', '2026-11-23 21:25:33.162284+01');
-INSERT INTO public.service_schema_migrations (service, name, checksum, applied_at) VALUES ('ml_experiments', '0007_cloud_registry.sql', '8517f793a4bd594c3dea9d3fdc2a3ca07ddd36a547d3b83afae242f4d3ebc882', '2026-11-23 21:25:33.162284+01');
-INSERT INTO public.service_schema_migrations (service, name, checksum, applied_at) VALUES ('recognition', '0001_replay.sql', '23e9e9291aeaa28da34697ab5983fa94c894b2ac1298735bcd019944ccde1c6f', '2026-11-23 21:25:33.162284+01');
-INSERT INTO public.service_schema_migrations (service, name, checksum, applied_at) VALUES ('recognition', '0002_model_events.sql', 'c858104309e61b3446b13f7fdeb6ab3e69951f0d867f4fad431c245517bc01e5', '2026-11-23 21:25:33.162284+01');
-INSERT INTO public.service_schema_migrations (service, name, checksum, applied_at) VALUES ('recognition', '0003_desktop_sessions.sql', '5a7a058f25dd96db3a89ec386d6182d4392c6900fe392a48d91542447a572eee', '2026-11-23 21:25:33.162284+01');
+INSERT INTO public.service_schema_migrations VALUES ('identity', '0001_operators.sql', 'dc60ee1b626c5f7ca1c20d6242f19fa576177187c0f2876ba989204297638baa', '2026-11-24 17:11:53.146359+00');
+INSERT INTO public.service_schema_migrations VALUES ('data_protocol', '0001_participants.sql', '6853cc658ad0338ce06e8739fecd7ccd2282560abf78f643f8767be52d5d863b', '2026-11-24 17:11:53.146359+00');
+INSERT INTO public.service_schema_migrations VALUES ('data_protocol', '0002_recordings.sql', 'c797fabc72e4cdc54c50a4c6ad6b7d62481ee9bdec071c14ad626f5b8adf71f1', '2026-11-24 17:11:53.146359+00');
+INSERT INTO public.service_schema_migrations VALUES ('data_protocol', '0003_synthetic_splits.sql', '1a562688bd19f3d5502194c60c7eee4f404d23d8feb7087a66316f7d25660a2e', '2026-11-24 17:11:53.146359+00');
+INSERT INTO public.service_schema_migrations VALUES ('data_protocol', '0004_research_splits.sql', '8324dfa833f9af3bb8ff7ed67670ab51c573e5c4a8c75159e5b8d705b28b4567', '2026-11-24 17:11:53.146359+00');
+INSERT INTO public.service_schema_migrations VALUES ('data_protocol', '0005_calibration.sql', '48a8ccde1ac6f2d4725e0dd21522e13c3546ac0c94971584c626c6f34625f1c4', '2026-11-24 17:11:53.146359+00');
+INSERT INTO public.service_schema_migrations VALUES ('data_protocol', '0006_client_publication.sql', '92d88728b019a4cc1f5bb09b0359dbc33f8aabc904ade926b5a472eb23dc58ff', '2026-11-24 17:11:53.146359+00');
+INSERT INTO public.service_schema_migrations VALUES ('data_protocol', '0007_recording_channels.sql', '3106c297218063e2708b8cd6982e6e80114b785ebcba824c96d216bd1acaceec', '2026-11-24 17:11:53.146359+00');
+INSERT INTO public.service_schema_migrations VALUES ('ml_experiments', '0001_summary_jobs.sql', '80f8480ad32f2eead3d0cd9160b9954d950ed6da02d8539e9f968f9c00648aea', '2026-11-24 17:11:53.146359+00');
+INSERT INTO public.service_schema_migrations VALUES ('ml_experiments', '0002_source_lda.sql', 'de0557008afc0659102873e978dafc19769c13538868b4fe3f07011bd700a12a', '2026-11-24 17:11:53.146359+00');
+INSERT INTO public.service_schema_migrations VALUES ('ml_experiments', '0003_model_checksum.sql', '4ec7b33966c124df0484c4911ceca1f1217513bebb526dd2a8035b5eda1b9342', '2026-11-24 17:11:53.146359+00');
+INSERT INTO public.service_schema_migrations VALUES ('ml_experiments', '0004_model_outbox.sql', '296be3ca06070145379c66ccf7ade293950557d724280904bc9238487c654c81', '2026-11-24 17:11:53.146359+00');
+INSERT INTO public.service_schema_migrations VALUES ('ml_experiments', '0005_experiment_jobs.sql', 'ba6f8dac74fc3309a1fcf400a9e0ad1f712edea36e936f52de2ebbb81cc64653', '2026-11-24 17:11:53.146359+00');
+INSERT INTO public.service_schema_migrations VALUES ('ml_experiments', '0006_trace_context.sql', 'a29b8b8e855ec4bcb9a1a5b7d78dd51a1650596cdbb2020133e4fab7c2f708b9', '2026-11-24 17:11:53.146359+00');
+INSERT INTO public.service_schema_migrations VALUES ('ml_experiments', '0007_cloud_registry.sql', '8517f793a4bd594c3dea9d3fdc2a3ca07ddd36a547d3b83afae242f4d3ebc882', '2026-11-24 17:11:53.146359+00');
+INSERT INTO public.service_schema_migrations VALUES ('recognition', '0001_replay.sql', '23e9e9291aeaa28da34697ab5983fa94c894b2ac1298735bcd019944ccde1c6f', '2026-11-24 17:11:53.146359+00');
+INSERT INTO public.service_schema_migrations VALUES ('recognition', '0002_model_events.sql', 'c858104309e61b3446b13f7fdeb6ab3e69951f0d867f4fad431c245517bc01e5', '2026-11-24 17:11:53.146359+00');
+INSERT INTO public.service_schema_migrations VALUES ('recognition', '0003_desktop_sessions.sql', '5a7a058f25dd96db3a89ec386d6182d4392c6900fe392a48d91542447a572eee', '2026-11-24 17:11:53.146359+00');
 
 
 --

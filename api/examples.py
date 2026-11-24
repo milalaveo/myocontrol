@@ -9,13 +9,18 @@ HASH = "a" * 64
 TIME = "2026-11-24T10:00:00Z"
 TOKEN = "example-only-not-a-valid-session-token-0000000000"
 PARTICIPANT = {"id": uid(1), "pseudonym": "tutorial_source"}
-SIGNAL = {"participant_id": uid(1), "sample_rate_hz": 1000, "samples": [[1, 2, 3, 4], [2, 3, 4, 5]]}
+SIGNAL = {
+    "participant_id": uid(1),
+    "sample_rate_hz": 1000,
+    "samples": [[1, 2, 3, 4], [2, 3, 4, 5]],
+}
 RECORDING = {
     "id": uid(2),
     "participant_id": uid(1),
     "sample_rate_hz": 1000,
     "sample_count": 2,
     "artifact_sha256": HASH,
+    "channel_count": 4,
 }
 PROTOCOL = {
     "id": uid(3),
@@ -53,7 +58,13 @@ FEATURES = {
     "version": "time-domain-4ch-v1",
     "channels": 4,
     "order": "channel-major",
-    "features": ["mav", "rms", "waveform_length", "zero_crossings", "slope_sign_changes"],
+    "features": [
+        "mav",
+        "rms",
+        "waveform_length",
+        "zero_crossings",
+        "slope_sign_changes",
+    ],
     "window_ms": 200,
     "step_ms": 100,
     "zc_threshold": 0,
@@ -186,7 +197,10 @@ MODELS = {
     "ParticipantResponse": PARTICIPANT,
     "RecordingCreate": SIGNAL,
     "RecordingResponse": RECORDING,
-    "SyntheticSplitCreate": {"source_recording_id": uid(2), "test_recording_id": uid(15)},
+    "SyntheticSplitCreate": {
+        "source_recording_id": uid(2),
+        "test_recording_id": uid(15),
+    },
     "SyntheticSplitResponse": {
         "id": uid(16),
         "source_recording_id": uid(2),
@@ -201,7 +215,9 @@ MODELS = {
     "ManifestResponse": MANIFEST,
     "ParticipantAssignment": {k: ASSIGNMENT[k] for k in ["participant_id", "category"]},
     "ParticipantAssignmentResponse": ASSIGNMENT,
-    "UnitCreate": {k: UNIT[k] for k in ["participant_id", "category", "segment_id", "role"]},
+    "UnitCreate": {
+        k: UNIT[k] for k in ["participant_id", "category", "segment_id", "role"]
+    },
     "UnitResponse": UNIT,
     "SnapshotResponse": {
         **MANIFEST,
@@ -222,7 +238,12 @@ MODELS = {
     },
     "CalibrationCreate": {
         k: CALIBRATION[k]
-        for k in ["manifest_id", "participant_id", "selection_version", "budget_per_gesture"]
+        for k in [
+            "manifest_id",
+            "participant_id",
+            "selection_version",
+            "budget_per_gesture",
+        ]
     },
     "CalibrationResponse": CALIBRATION,
     "CalibrationItemCreate": {"unit_id": uid(6)},
@@ -274,12 +295,80 @@ MODELS = {
         "model_checksum": HASH,
         "result": {
             "feature_version": "time-domain-4ch-v1",
-            "predictions": [{"start_sample": 0, "gesture": "rest", "command": "neutral"}],
+            "predictions": [
+                {"start_sample": 0, "gesture": "rest", "command": "neutral"}
+            ],
             "prediction_count": 1,
             "processing_p95_ms": 0.05,
             "timing_scope": "feature extraction and prediction only; excludes input buffering and rendering",
         },
         "error": None,
     },
-    "AvailableModel": {"model_run_id": uid(18), "manifest_id": uid(4), "received_at": TIME},
+    "AvailableModel": {
+        "model_run_id": uid(18),
+        "manifest_id": uid(4),
+        "received_at": TIME,
+    },
 }
+
+DESKTOP_INPUT = {
+    "local_recording_id": uid(31),
+    "participant_key": "tutorial-local",
+    "sample_rate_hz": 1000,
+    "channel_map": [0, 1, 2, 3],
+    "samples": [[1, 2, 3, 4], [2, 3, 4, 5]],
+    "source_kind": "synthetic",
+    "source_name": "tutorial",
+    "source_version": "1",
+    "units": "arbitrary",
+    "original_signal_key": uid(30),
+    "original_sha256": HASH,
+    "original_start_sample": 0,
+    "purpose": "research",
+    "gesture_code": None,
+}
+DESKTOP_RECORDING = {
+    "id": uid(2),
+    "local_recording_id": uid(31),
+    "sample_rate_hz": 1000,
+    "sample_count": 2,
+    "channel_count": 4,
+    "artifact_sha256": HASH,
+    "source_kind": "synthetic",
+    "source_name": "tutorial",
+    "source_version": "1",
+    "source_participant_key": "tutorial-local",
+    "original_signal_key": uid(30),
+    "original_sha256": HASH,
+    "original_start_sample": 0,
+    "original_end_sample": 2,
+    "channel_map": [0, 1, 2, 3],
+    "units": "arbitrary",
+    "received_at": TIME,
+}
+MODELS.update(
+    {
+        "ClientRecordingCreate": DESKTOP_INPUT,
+        "PublicationReceipt": {
+            "id": uid(32),
+            "recording_id": uid(2),
+            "local_recording_id": uid(31),
+            "payload_sha256": HASH,
+            "received_at": TIME,
+        },
+        "OwnedRecording": DESKTOP_RECORDING,
+        "OwnedRecordingPage": {"items": [DESKTOP_RECORDING], "next_offset": None},
+        "OwnedSignal": {
+            key: DESKTOP_INPUT[key]
+            for key in (
+                "sample_rate_hz",
+                "channel_map",
+                "units",
+                "source_kind",
+                "source_name",
+                "source_version",
+                "samples",
+            )
+        },
+    }
+)

@@ -1,0 +1,45 @@
+name: Desktop checks
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  desktop:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: desktop
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: npm ci
+      - run: npm run setup:runtime
+      - name: Runtime tests
+        shell: pwsh
+        run: |
+          $env:PYTHONPATH='../local-runtime'
+          & ../local-runtime/.venv/Scripts/python.exe -m unittest discover -s ../local-runtime/tests -v
+      - run: npm run format:check
+      - run: npm run build
+      - run: npm run test:e2e
+      - run: npm run build:runtime
+      - run: npm exec electron-builder -- --win nsis --publish never
+      - name: Packaged application check
+        shell: pwsh
+        run: |
+          $env:MYOCONTROL_TEST_EXECUTABLE=(Resolve-Path 'release/win-unpacked/MyoControl.exe').Path
+          npm run test:e2e
+      - uses: actions/upload-artifact@v4
+        if: github.event_name == 'workflow_dispatch'
+        with:
+          name: myocontrol-windows
+          path: desktop/release/*setup.exe

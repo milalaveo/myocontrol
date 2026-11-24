@@ -51,7 +51,7 @@ An existing disposable PostgreSQL 16+ instance can also be used. Create a databa
 
 The runner:
 
-- applies all 17 immutable service migrations and provisions isolated NOLOGIN roles;
+- applies all 18 immutable service migrations and provisions isolated NOLOGIN roles;
 - repeats migration application and checks that history does not change;
 - creates an additional uniquely named review database, installs the previous 13-migration service schema, inserts synthetic existing data, then upgrades and verifies preservation;
 - executes relational acceptance tests with positive and negative cases;

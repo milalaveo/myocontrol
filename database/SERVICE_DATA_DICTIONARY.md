@@ -1,7 +1,7 @@
 # Service Database — Generated Physical Dictionary
 
 Generated from the migrated service schemas. No account/recording/result row data is exported.
-Validated source server: PostgreSQL 16.3. Target CI uses PostgreSQL 18.
+Validated source server: PostgreSQL 18.7 (Debian 18.7-1.pgdg13+2). Target CI uses PostgreSQL 18.
 
 **Business tables:** 28. `public.service_schema_migrations` is bookkeeping and is listed separately in the main dictionary.
 
@@ -22,7 +22,9 @@ JSON contracts require API/runtime schema validation in addition to the structur
 
 - `calibration_items_pkey`: `PRIMARY KEY (subset_id, unit_id)`
 - `calibration_items_subset_id_fkey`: `FOREIGN KEY (subset_id) REFERENCES data_protocol.calibration_subsets(id) ON DELETE RESTRICT`
+- `calibration_items_subset_id_not_null`: `NOT NULL subset_id`
 - `calibration_items_unit_id_fkey`: `FOREIGN KEY (unit_id) REFERENCES data_protocol.manifest_units(id) ON DELETE RESTRICT`
+- `calibration_items_unit_id_not_null`: `NOT NULL unit_id`
 
 ### Indexes
 
@@ -43,12 +45,19 @@ JSON contracts require API/runtime schema validation in addition to the structur
 ### Keys and constraints
 
 - `calibration_subsets_budget_per_gesture_check`: `CHECK ((budget_per_gesture > 0))`
+- `calibration_subsets_budget_per_gesture_not_null`: `NOT NULL budget_per_gesture`
 - `calibration_subsets_category_check`: `CHECK ((category = 'target'::text))`
+- `calibration_subsets_category_not_null`: `NOT NULL category`
+- `calibration_subsets_id_not_null`: `NOT NULL id`
+- `calibration_subsets_manifest_id_not_null`: `NOT NULL manifest_id`
 - `calibration_subsets_manifest_id_participant_id_category_fkey`: `FOREIGN KEY (manifest_id, participant_id, category) REFERENCES data_protocol.manifest_participants(manifest_id, participant_id, category) ON DELETE RESTRICT`
 - `calibration_subsets_manifest_id_participant_id_selection_ve_key`: `UNIQUE (manifest_id, participant_id, selection_version, budget_per_gesture)`
+- `calibration_subsets_participant_id_not_null`: `NOT NULL participant_id`
 - `calibration_subsets_pkey`: `PRIMARY KEY (id)`
 - `calibration_subsets_selection_version_check`: `CHECK ((length(TRIM(BOTH FROM selection_version)) > 0))`
+- `calibration_subsets_selection_version_not_null`: `NOT NULL selection_version`
 - `calibration_subsets_state_check`: `CHECK ((state = ANY (ARRAY['draft'::text, 'frozen'::text])))`
+- `calibration_subsets_state_not_null`: `NOT NULL state`
 
 ### Indexes
 
@@ -69,14 +78,23 @@ JSON contracts require API/runtime schema validation in addition to the structur
 
 ### Keys and constraints
 
+- `client_publication_operator_local_unique`: `UNIQUE (operator_id, local_recording_id)`
+- `client_publications_client_id_not_null`: `NOT NULL client_id`
+- `client_publications_id_not_null`: `NOT NULL id`
+- `client_publications_local_recording_id_not_null`: `NOT NULL local_recording_id`
 - `client_publications_operator_id_client_id_local_recording_i_key`: `UNIQUE (operator_id, client_id, local_recording_id)`
+- `client_publications_operator_id_not_null`: `NOT NULL operator_id`
 - `client_publications_payload_sha256_check`: `CHECK ((payload_sha256 ~ '^[0-9a-f]{64}$'::text))`
+- `client_publications_payload_sha256_not_null`: `NOT NULL payload_sha256`
 - `client_publications_pkey`: `PRIMARY KEY (id)`
+- `client_publications_received_at_not_null`: `NOT NULL received_at`
 - `client_publications_recording_id_fkey`: `FOREIGN KEY (recording_id) REFERENCES data_protocol.recordings(id) ON DELETE RESTRICT`
 - `client_publications_recording_id_key`: `UNIQUE (recording_id)`
+- `client_publications_recording_id_not_null`: `NOT NULL recording_id`
 
 ### Indexes
 
+- `CREATE UNIQUE INDEX client_publication_operator_local_unique ON data_protocol.client_publications USING btree (operator_id, local_recording_id)`
 - `CREATE UNIQUE INDEX client_publications_operator_id_client_id_local_recording_i_key ON data_protocol.client_publications USING btree (operator_id, client_id, local_recording_id)`
 - `CREATE UNIQUE INDEX client_publications_pkey ON data_protocol.client_publications USING btree (id)`
 - `CREATE UNIQUE INDEX client_publications_recording_id_key ON data_protocol.client_publications USING btree (recording_id)`
@@ -95,12 +113,18 @@ JSON contracts require API/runtime schema validation in addition to the structur
 ### Keys and constraints
 
 - `labelled_segments_check`: `CHECK ((end_sample > start_sample))`
+- `labelled_segments_end_sample_not_null`: `NOT NULL end_sample`
 - `labelled_segments_gesture_code_check`: `CHECK ((gesture_code ~ '^[A-Za-z0-9_-]{1,100}$'::text))`
+- `labelled_segments_gesture_code_not_null`: `NOT NULL gesture_code`
+- `labelled_segments_id_not_null`: `NOT NULL id`
 - `labelled_segments_pkey`: `PRIMARY KEY (id)`
 - `labelled_segments_recording_id_fkey`: `FOREIGN KEY (recording_id) REFERENCES data_protocol.recordings(id) ON DELETE RESTRICT`
+- `labelled_segments_recording_id_not_null`: `NOT NULL recording_id`
 - `labelled_segments_recording_id_repetition_key_key`: `UNIQUE (recording_id, repetition_key)`
 - `labelled_segments_repetition_key_check`: `CHECK ((length(TRIM(BOTH FROM repetition_key)) > 0))`
+- `labelled_segments_repetition_key_not_null`: `NOT NULL repetition_key`
 - `labelled_segments_start_sample_check`: `CHECK ((start_sample >= 0))`
+- `labelled_segments_start_sample_not_null`: `NOT NULL start_sample`
 
 ### Indexes
 
@@ -118,9 +142,12 @@ JSON contracts require API/runtime schema validation in addition to the structur
 ### Keys and constraints
 
 - `manifest_participants_category_check`: `CHECK ((category = ANY (ARRAY['source'::text, 'development'::text, 'target'::text])))`
+- `manifest_participants_category_not_null`: `NOT NULL category`
 - `manifest_participants_manifest_id_fkey`: `FOREIGN KEY (manifest_id) REFERENCES data_protocol.research_manifests(id) ON DELETE RESTRICT`
+- `manifest_participants_manifest_id_not_null`: `NOT NULL manifest_id`
 - `manifest_participants_manifest_id_participant_id_category_key`: `UNIQUE (manifest_id, participant_id, category)`
 - `manifest_participants_participant_id_fkey`: `FOREIGN KEY (participant_id) REFERENCES data_protocol.participants(id) ON DELETE RESTRICT`
+- `manifest_participants_participant_id_not_null`: `NOT NULL participant_id`
 - `manifest_participants_pkey`: `PRIMARY KEY (manifest_id, participant_id)`
 
 ### Indexes
@@ -141,12 +168,18 @@ JSON contracts require API/runtime schema validation in addition to the structur
 
 ### Keys and constraints
 
+- `manifest_units_category_not_null`: `NOT NULL category`
 - `manifest_units_check`: `CHECK ((((category = 'source'::text) AND (role = 'source_train'::text)) OR ((category = 'development'::text) AND (role = 'development_validation'::text)) OR ((category = 'target'::text) AND (role = ANY (ARRAY['target_calibration'::text, 'target_test'::text])))))`
+- `manifest_units_id_not_null`: `NOT NULL id`
+- `manifest_units_manifest_id_not_null`: `NOT NULL manifest_id`
 - `manifest_units_manifest_id_participant_id_category_fkey`: `FOREIGN KEY (manifest_id, participant_id, category) REFERENCES data_protocol.manifest_participants(manifest_id, participant_id, category) ON DELETE RESTRICT`
 - `manifest_units_manifest_id_segment_id_role_key`: `UNIQUE (manifest_id, segment_id, role)`
+- `manifest_units_participant_id_not_null`: `NOT NULL participant_id`
 - `manifest_units_pkey`: `PRIMARY KEY (id)`
 - `manifest_units_role_check`: `CHECK ((role = ANY (ARRAY['source_train'::text, 'development_validation'::text, 'target_calibration'::text, 'target_test'::text])))`
+- `manifest_units_role_not_null`: `NOT NULL role`
 - `manifest_units_segment_id_fkey`: `FOREIGN KEY (segment_id) REFERENCES data_protocol.labelled_segments(id) ON DELETE RESTRICT`
+- `manifest_units_segment_id_not_null`: `NOT NULL segment_id`
 
 ### Indexes
 
@@ -162,9 +195,11 @@ JSON contracts require API/runtime schema validation in addition to the structur
 
 ### Keys and constraints
 
+- `participants_id_not_null`: `NOT NULL id`
 - `participants_pkey`: `PRIMARY KEY (id)`
 - `participants_pseudonym_format`: `CHECK (((pseudonym)::text ~ '^[A-Za-z0-9_-]{1,100}$'::text))`
 - `participants_pseudonym_key`: `UNIQUE (pseudonym)`
+- `participants_pseudonym_not_null`: `NOT NULL pseudonym`
 
 ### Indexes
 
@@ -183,9 +218,13 @@ JSON contracts require API/runtime schema validation in addition to the structur
 ### Keys and constraints
 
 - `protocol_versions_gesture_codes_check`: `CHECK (((cardinality(gesture_codes) > 0) AND ('rest'::text = ANY (gesture_codes))))`
+- `protocol_versions_gesture_codes_not_null`: `NOT NULL gesture_codes`
+- `protocol_versions_id_not_null`: `NOT NULL id`
+- `protocol_versions_name_not_null`: `NOT NULL name`
 - `protocol_versions_name_version_key`: `UNIQUE (name, version)`
 - `protocol_versions_pkey`: `PRIMARY KEY (id)`
 - `protocol_versions_version_check`: `CHECK ((version > 0))`
+- `protocol_versions_version_not_null`: `NOT NULL version`
 
 ### Indexes
 
@@ -214,18 +253,32 @@ JSON contracts require API/runtime schema validation in addition to the structur
 ### Keys and constraints
 
 - `recording_provenance_channel_map_check`: `CHECK (((jsonb_typeof(channel_map) = 'array'::text) AND (jsonb_array_length(channel_map) > 0)))`
+- `recording_provenance_channel_map_not_null`: `NOT NULL channel_map`
 - `recording_provenance_check`: `CHECK ((original_end_sample > original_start_sample))`
+- `recording_provenance_created_at_not_null`: `NOT NULL created_at`
 - `recording_provenance_identity_method_version_check`: `CHECK ((length(btrim(identity_method_version)) > 0))`
+- `recording_provenance_identity_method_version_not_null`: `NOT NULL identity_method_version`
+- `recording_provenance_operator_id_not_null`: `NOT NULL operator_id`
+- `recording_provenance_original_end_sample_not_null`: `NOT NULL original_end_sample`
 - `recording_provenance_original_sha256_check`: `CHECK ((original_sha256 ~ '^[0-9a-f]{64}$'::text))`
+- `recording_provenance_original_sha256_not_null`: `NOT NULL original_sha256`
 - `recording_provenance_original_signal_key_check`: `CHECK ((length(btrim(original_signal_key)) > 0))`
+- `recording_provenance_original_signal_key_not_null`: `NOT NULL original_signal_key`
 - `recording_provenance_original_start_sample_check`: `CHECK ((original_start_sample >= 0))`
+- `recording_provenance_original_start_sample_not_null`: `NOT NULL original_start_sample`
 - `recording_provenance_pkey`: `PRIMARY KEY (recording_id)`
 - `recording_provenance_recording_id_fkey`: `FOREIGN KEY (recording_id) REFERENCES data_protocol.recordings(id) ON DELETE RESTRICT`
+- `recording_provenance_recording_id_not_null`: `NOT NULL recording_id`
 - `recording_provenance_source_kind_check`: `CHECK ((source_kind = ANY (ARRAY['synthetic'::text, 'dataset'::text, 'device'::text])))`
+- `recording_provenance_source_kind_not_null`: `NOT NULL source_kind`
 - `recording_provenance_source_name_check`: `CHECK ((length(btrim(source_name)) > 0))`
+- `recording_provenance_source_name_not_null`: `NOT NULL source_name`
 - `recording_provenance_source_participant_key_check`: `CHECK ((length(btrim(source_participant_key)) > 0))`
+- `recording_provenance_source_participant_key_not_null`: `NOT NULL source_participant_key`
 - `recording_provenance_source_version_check`: `CHECK ((length(btrim(source_version)) > 0))`
+- `recording_provenance_source_version_not_null`: `NOT NULL source_version`
 - `recording_provenance_units_check`: `CHECK ((length(btrim(units)) > 0))`
+- `recording_provenance_units_not_null`: `NOT NULL units`
 
 ### Indexes
 
@@ -242,14 +295,22 @@ JSON contracts require API/runtime schema validation in addition to the structur
 | `sample_rate_hz` | `numeric` | NO |  | Signal sampling frequency in hertz. |
 | `sample_count` | `integer` | NO |  | Number of samples in the recording. |
 | `artifact_sha256` | `character varying(64)` | NO |  | Signal artifact checksum. |
+| `channel_count` | `smallint` | NO | 4 | Actual stored sample width (1-6), default four; no implicit channel padding. |
 
 ### Keys and constraints
 
 - `recordings_artifact_sha256_check`: `CHECK (((artifact_sha256)::text ~ '^[0-9a-f]{64}$'::text))`
+- `recordings_artifact_sha256_not_null`: `NOT NULL artifact_sha256`
+- `recordings_channel_count_check`: `CHECK (((channel_count >= 1) AND (channel_count <= 6)))`
+- `recordings_channel_count_not_null`: `NOT NULL channel_count`
+- `recordings_id_not_null`: `NOT NULL id`
 - `recordings_participant_id_fkey`: `FOREIGN KEY (participant_id) REFERENCES data_protocol.participants(id) ON DELETE RESTRICT`
+- `recordings_participant_id_not_null`: `NOT NULL participant_id`
 - `recordings_pkey`: `PRIMARY KEY (id)`
 - `recordings_sample_count_check`: `CHECK (((sample_count >= 1) AND (sample_count <= 10000)))`
+- `recordings_sample_count_not_null`: `NOT NULL sample_count`
 - `recordings_sample_rate_hz_check`: `CHECK (((sample_rate_hz > (0)::numeric) AND (sample_rate_hz <= (100000)::numeric)))`
+- `recordings_sample_rate_hz_not_null`: `NOT NULL sample_rate_hz`
 
 ### Indexes
 
@@ -270,11 +331,16 @@ JSON contracts require API/runtime schema validation in addition to the structur
 ### Keys and constraints
 
 - `research_manifests_check`: `CHECK ((((state = 'draft'::text) AND (checksum IS NULL) AND (frozen_at IS NULL)) OR ((state = 'frozen'::text) AND (checksum IS NOT NULL) AND ((checksum)::text ~ '^[0-9a-f]{64}$'::text) AND (frozen_at IS NOT NULL))))`
+- `research_manifests_id_not_null`: `NOT NULL id`
+- `research_manifests_name_not_null`: `NOT NULL name`
 - `research_manifests_name_version_key`: `UNIQUE (name, version)`
 - `research_manifests_pkey`: `PRIMARY KEY (id)`
 - `research_manifests_protocol_id_fkey`: `FOREIGN KEY (protocol_id) REFERENCES data_protocol.protocol_versions(id) ON DELETE RESTRICT`
+- `research_manifests_protocol_id_not_null`: `NOT NULL protocol_id`
 - `research_manifests_state_check`: `CHECK ((state = ANY (ARRAY['draft'::text, 'frozen'::text])))`
+- `research_manifests_state_not_null`: `NOT NULL state`
 - `research_manifests_version_check`: `CHECK ((version > 0))`
+- `research_manifests_version_not_null`: `NOT NULL version`
 
 ### Indexes
 
@@ -294,9 +360,13 @@ JSON contracts require API/runtime schema validation in addition to the structur
 
 - `synthetic_splits_check`: `CHECK ((source_recording_id <> test_recording_id))`
 - `synthetic_splits_checksum_check`: `CHECK (((checksum)::text ~ '^[0-9a-f]{64}$'::text))`
+- `synthetic_splits_checksum_not_null`: `NOT NULL checksum`
+- `synthetic_splits_id_not_null`: `NOT NULL id`
 - `synthetic_splits_pkey`: `PRIMARY KEY (id)`
 - `synthetic_splits_source_recording_id_fkey`: `FOREIGN KEY (source_recording_id) REFERENCES data_protocol.recordings(id) ON DELETE RESTRICT`
+- `synthetic_splits_source_recording_id_not_null`: `NOT NULL source_recording_id`
 - `synthetic_splits_test_recording_id_fkey`: `FOREIGN KEY (test_recording_id) REFERENCES data_protocol.recordings(id) ON DELETE RESTRICT`
+- `synthetic_splits_test_recording_id_not_null`: `NOT NULL test_recording_id`
 
 ### Indexes
 
@@ -321,11 +391,17 @@ JSON contracts require API/runtime schema validation in addition to the structur
 - `access_sessions_check1`: `CHECK (((revoked_at IS NULL) OR (revoked_at >= issued_at)))`
 - `access_sessions_check2`: `CHECK ((((scope = 'web'::text) AND (client_id IS NULL)) OR ((scope <> 'web'::text) AND (client_id IS NOT NULL))))`
 - `access_sessions_client_id_operator_id_fkey`: `FOREIGN KEY (client_id, operator_id) REFERENCES identity.clients(id, operator_id) ON DELETE RESTRICT`
+- `access_sessions_expires_at_not_null`: `NOT NULL expires_at`
+- `access_sessions_id_not_null`: `NOT NULL id`
+- `access_sessions_issued_at_not_null`: `NOT NULL issued_at`
 - `access_sessions_operator_id_fkey`: `FOREIGN KEY (operator_id) REFERENCES identity.operators(id) ON DELETE RESTRICT`
+- `access_sessions_operator_id_not_null`: `NOT NULL operator_id`
 - `access_sessions_pkey`: `PRIMARY KEY (id)`
 - `access_sessions_scope_check`: `CHECK ((scope = ANY (ARRAY['web'::text, 'desktop'::text, 'training_worker'::text])))`
+- `access_sessions_scope_not_null`: `NOT NULL scope`
 - `access_sessions_token_sha256_check`: `CHECK ((token_sha256 ~ '^[0-9a-f]{64}$'::text))`
 - `access_sessions_token_sha256_key`: `UNIQUE (token_sha256)`
+- `access_sessions_token_sha256_not_null`: `NOT NULL token_sha256`
 
 ### Indexes
 
@@ -347,13 +423,20 @@ JSON contracts require API/runtime schema validation in addition to the structur
 
 ### Keys and constraints
 
+- `clients_created_at_not_null`: `NOT NULL created_at`
+- `clients_id_not_null`: `NOT NULL id`
 - `clients_id_operator_id_key`: `UNIQUE (id, operator_id)`
 - `clients_kind_check`: `CHECK ((kind = ANY (ARRAY['desktop'::text, 'training_worker'::text])))`
+- `clients_kind_not_null`: `NOT NULL kind`
 - `clients_name_check`: `CHECK (((length(btrim(name)) >= 1) AND (length(btrim(name)) <= 120)))`
+- `clients_name_not_null`: `NOT NULL name`
 - `clients_operator_id_fkey`: `FOREIGN KEY (operator_id) REFERENCES identity.operators(id) ON DELETE RESTRICT`
+- `clients_operator_id_not_null`: `NOT NULL operator_id`
 - `clients_pkey`: `PRIMARY KEY (id)`
 - `clients_platform_check`: `CHECK (((length(btrim(platform)) >= 1) AND (length(btrim(platform)) <= 120)))`
+- `clients_platform_not_null`: `NOT NULL platform`
 - `clients_state_check`: `CHECK ((state = ANY (ARRAY['active'::text, 'revoked'::text])))`
+- `clients_state_not_null`: `NOT NULL state`
 
 ### Indexes
 
@@ -376,13 +459,21 @@ JSON contracts require API/runtime schema validation in addition to the structur
 
 ### Keys and constraints
 
+- `operators_created_at_not_null`: `NOT NULL created_at`
 - `operators_display_name_check`: `CHECK (((length(btrim(display_name)) >= 1) AND (length(btrim(display_name)) <= 120)))`
+- `operators_display_name_not_null`: `NOT NULL display_name`
 - `operators_email_check`: `CHECK (((email = lower(btrim(email))) AND (length(email) <= 320) AND (email ~ '^[^[:space:]@]+@[^[:space:]@]+\.[^[:space:]@]+$'::text)))`
 - `operators_email_key`: `UNIQUE (email)`
+- `operators_email_not_null`: `NOT NULL email`
+- `operators_id_not_null`: `NOT NULL id`
 - `operators_password_hash_check`: `CHECK (((password_hash ~~ '$argon2id$v=19$%'::text) AND ((length(password_hash) >= 40) AND (length(password_hash) <= 1024))))`
+- `operators_password_hash_not_null`: `NOT NULL password_hash`
 - `operators_pkey`: `PRIMARY KEY (id)`
 - `operators_role_check`: `CHECK ((role = ANY (ARRAY['operator'::text, 'reviewer'::text, 'administrator'::text])))`
+- `operators_role_not_null`: `NOT NULL role`
 - `operators_state_check`: `CHECK ((state = ANY (ARRAY['active'::text, 'disabled'::text])))`
+- `operators_state_not_null`: `NOT NULL state`
+- `operators_updated_at_not_null`: `NOT NULL updated_at`
 
 ### Indexes
 
@@ -406,13 +497,21 @@ JSON contracts require API/runtime schema validation in addition to the structur
 ### Keys and constraints
 
 - `artifacts_check`: `CHECK ((((state = 'staged'::text) AND (verified_at IS NULL)) OR ((state = 'verified'::text) AND (verified_at IS NOT NULL))))`
+- `artifacts_created_at_not_null`: `NOT NULL created_at`
+- `artifacts_id_not_null`: `NOT NULL id`
 - `artifacts_media_type_check`: `CHECK ((length(btrim(media_type)) > 0))`
+- `artifacts_media_type_not_null`: `NOT NULL media_type`
+- `artifacts_operator_id_not_null`: `NOT NULL operator_id`
 - `artifacts_pkey`: `PRIMARY KEY (id)`
 - `artifacts_sha256_check`: `CHECK ((sha256 ~ '^[0-9a-f]{64}$'::text))`
+- `artifacts_sha256_not_null`: `NOT NULL sha256`
 - `artifacts_size_bytes_check`: `CHECK ((size_bytes > 0))`
+- `artifacts_size_bytes_not_null`: `NOT NULL size_bytes`
 - `artifacts_state_check`: `CHECK ((state = ANY (ARRAY['staged'::text, 'verified'::text])))`
+- `artifacts_state_not_null`: `NOT NULL state`
 - `artifacts_storage_key_check`: `CHECK ((length(btrim(storage_key)) > 0))`
 - `artifacts_storage_key_key`: `UNIQUE (storage_key)`
+- `artifacts_storage_key_not_null`: `NOT NULL storage_key`
 
 ### Indexes
 
@@ -431,11 +530,16 @@ JSON contracts require API/runtime schema validation in addition to the structur
 
 ### Keys and constraints
 
+- `confusion_counts_actual_class_not_null`: `NOT NULL actual_class`
 - `confusion_counts_count_check`: `CHECK ((count >= 0))`
+- `confusion_counts_count_not_null`: `NOT NULL count`
 - `confusion_counts_evaluation_id_model_id_fkey`: `FOREIGN KEY (evaluation_id, model_id) REFERENCES ml_experiments.evaluations(id, model_id) ON DELETE RESTRICT`
+- `confusion_counts_evaluation_id_not_null`: `NOT NULL evaluation_id`
 - `confusion_counts_model_id_actual_class_fkey`: `FOREIGN KEY (model_id, actual_class) REFERENCES ml_experiments.model_classes(model_id, code) ON DELETE RESTRICT`
+- `confusion_counts_model_id_not_null`: `NOT NULL model_id`
 - `confusion_counts_model_id_predicted_class_fkey`: `FOREIGN KEY (model_id, predicted_class) REFERENCES ml_experiments.model_classes(model_id, code) ON DELETE RESTRICT`
 - `confusion_counts_pkey`: `PRIMARY KEY (evaluation_id, actual_class, predicted_class)`
+- `confusion_counts_predicted_class_not_null`: `NOT NULL predicted_class`
 
 ### Indexes
 
@@ -456,14 +560,19 @@ JSON contracts require API/runtime schema validation in addition to the structur
 ### Keys and constraints
 
 - `evaluations_accuracy_check`: `CHECK (((accuracy >= (0)::double precision) AND (accuracy <= (1)::double precision)))`
+- `evaluations_accuracy_not_null`: `NOT NULL accuracy`
 - `evaluations_check`: `CHECK ((((rest_false_activation_rate IS NOT NULL) AND (rest_missing_reason IS NULL)) OR ((rest_false_activation_rate IS NULL) AND (rest_missing_reason IS NOT NULL) AND (length(btrim(rest_missing_reason)) > 0))))`
 - `evaluations_id_model_id_key`: `UNIQUE (id, model_id)`
+- `evaluations_id_not_null`: `NOT NULL id`
 - `evaluations_macro_f1_check`: `CHECK (((macro_f1 >= (0)::double precision) AND (macro_f1 <= (1)::double precision)))`
+- `evaluations_macro_f1_not_null`: `NOT NULL macro_f1`
 - `evaluations_model_id_fkey`: `FOREIGN KEY (model_id) REFERENCES ml_experiments.model_versions(id) ON DELETE RESTRICT`
+- `evaluations_model_id_not_null`: `NOT NULL model_id`
 - `evaluations_pkey`: `PRIMARY KEY (id)`
 - `evaluations_rest_false_activation_rate_check`: `CHECK (((rest_false_activation_rate >= (0)::double precision) AND (rest_false_activation_rate <= (1)::double precision)))`
 - `evaluations_run_id_fkey`: `FOREIGN KEY (run_id) REFERENCES ml_experiments.experiment_runs(id) ON DELETE RESTRICT`
 - `evaluations_run_id_key`: `UNIQUE (run_id)`
+- `evaluations_run_id_not_null`: `NOT NULL run_id`
 
 ### Indexes
 
@@ -512,22 +621,38 @@ JSON contracts require API/runtime schema validation in addition to the structur
 - `experiment_runs_check3`: `CHECK ((((kind = 'evaluate'::text) AND (evaluated_model_id IS NOT NULL) AND (target_participant_id IS NOT NULL)) OR ((kind <> 'evaluate'::text) AND (evaluated_model_id IS NULL))))`
 - `experiment_runs_check4`: `CHECK ((((status = 'queued'::text) AND (started_at IS NULL) AND (heartbeat_at IS NULL) AND (lease_expires_at IS NULL) AND (worker_client_id IS NULL) AND (lease_sha256 IS NULL) AND (completed_at IS NULL) AND (error IS NULL)) OR ((status <> 'queued'::text) AND (worker_client_id IS NOT NULL) AND (lease_sha256 IS NOT NULL) AND (started_at IS NOT NULL) AND (heartbeat_at IS NOT NULL) AND (lease_expires_at IS NOT NULL) AND (heartbeat_at >= started_at) AND (lease_expires_at > heartbeat_at) AND (((status = 'running'::text) AND (completed_at IS NULL) AND (error IS NULL)) OR ((status = 'succeeded'::text) AND (completed_at IS NOT NULL) AND (completed_at >= started_at) AND (error IS NULL)) OR ((status = ANY (ARRAY['failed'::text, 'interrupted'::text])) AND (completed_at IS NOT NULL) AND (completed_at >= started_at) AND (error IS NOT NULL) AND (length(btrim(error)) > 0))))))`
 - `experiment_runs_condition_check`: `CHECK ((condition = ANY (ARRAY['source_only'::text, 'personalised'::text, 'target_only'::text])))`
+- `experiment_runs_condition_not_null`: `NOT NULL condition`
+- `experiment_runs_created_at_not_null`: `NOT NULL created_at`
 - `experiment_runs_evaluated_model_id_fkey`: `FOREIGN KEY (evaluated_model_id) REFERENCES ml_experiments.model_versions(id) ON DELETE RESTRICT`
 - `experiment_runs_execution_location_check`: `CHECK ((execution_location = ANY (ARRAY['local_workstation'::text, 'desktop'::text])))`
+- `experiment_runs_execution_location_not_null`: `NOT NULL execution_location`
 - `experiment_runs_family_check`: `CHECK ((family = ANY (ARRAY['lda'::text, 'svm'::text, 'mlp'::text])))`
+- `experiment_runs_family_not_null`: `NOT NULL family`
 - `experiment_runs_feature_contract_check`: `CHECK (((jsonb_typeof(feature_contract) = 'object'::text) AND (feature_contract ? 'version'::text) AND (jsonb_typeof((feature_contract -> 'version'::text)) = 'string'::text) AND (length(btrim((feature_contract ->> 'version'::text))) > 0)))`
+- `experiment_runs_feature_contract_not_null`: `NOT NULL feature_contract`
+- `experiment_runs_id_not_null`: `NOT NULL id`
 - `experiment_runs_input_snapshot_check`: `CHECK ((jsonb_typeof(input_snapshot) = 'object'::text))`
+- `experiment_runs_input_snapshot_not_null`: `NOT NULL input_snapshot`
 - `experiment_runs_kind_check`: `CHECK ((kind = ANY (ARRAY['source_train'::text, 'personalise'::text, 'target_train'::text, 'evaluate'::text])))`
+- `experiment_runs_kind_not_null`: `NOT NULL kind`
 - `experiment_runs_lease_sha256_check`: `CHECK ((lease_sha256 ~ '^[0-9a-f]{64}$'::text))`
+- `experiment_runs_manifest_id_not_null`: `NOT NULL manifest_id`
 - `experiment_runs_manifest_sha256_check`: `CHECK ((manifest_sha256 ~ '^[0-9a-f]{64}$'::text))`
+- `experiment_runs_manifest_sha256_not_null`: `NOT NULL manifest_sha256`
+- `experiment_runs_operator_id_not_null`: `NOT NULL operator_id`
 - `experiment_runs_operator_id_submission_key_key`: `UNIQUE (operator_id, submission_key)`
 - `experiment_runs_parameters_check`: `CHECK ((jsonb_typeof(parameters) = 'object'::text))`
+- `experiment_runs_parameters_not_null`: `NOT NULL parameters`
 - `experiment_runs_parent_model_id_fkey`: `FOREIGN KEY (parent_model_id) REFERENCES ml_experiments.model_versions(id) ON DELETE RESTRICT`
 - `experiment_runs_pkey`: `PRIMARY KEY (id)`
 - `experiment_runs_retry_of_id_fkey`: `FOREIGN KEY (retry_of_id) REFERENCES ml_experiments.experiment_runs(id) ON DELETE RESTRICT`
+- `experiment_runs_seed_not_null`: `NOT NULL seed`
 - `experiment_runs_software_version_check`: `CHECK ((length(btrim(software_version)) > 0))`
+- `experiment_runs_software_version_not_null`: `NOT NULL software_version`
 - `experiment_runs_status_check`: `CHECK ((status = ANY (ARRAY['queued'::text, 'running'::text, 'succeeded'::text, 'failed'::text, 'interrupted'::text])))`
+- `experiment_runs_status_not_null`: `NOT NULL status`
 - `experiment_runs_submission_key_check`: `CHECK (((length(btrim(submission_key)) >= 1) AND (length(btrim(submission_key)) <= 120)))`
+- `experiment_runs_submission_key_not_null`: `NOT NULL submission_key`
 - `validate_run_output`: `TRIGGER DEFERRABLE INITIALLY DEFERRED`
 
 ### Indexes
@@ -549,10 +674,13 @@ JSON contracts require API/runtime schema validation in addition to the structur
 ### Keys and constraints
 
 - `model_classes_code_check`: `CHECK ((code ~ '^[A-Za-z0-9_-]{1,100}$'::text))`
+- `model_classes_code_not_null`: `NOT NULL code`
 - `model_classes_model_id_fkey`: `FOREIGN KEY (model_id) REFERENCES ml_experiments.model_versions(id) ON DELETE RESTRICT`
+- `model_classes_model_id_not_null`: `NOT NULL model_id`
 - `model_classes_model_id_position_key`: `UNIQUE (model_id, "position")`
 - `model_classes_pkey`: `PRIMARY KEY (model_id, code)`
 - `model_classes_position_check`: `CHECK (("position" >= 0))`
+- `model_classes_position_not_null`: `NOT NULL "position"`
 
 ### Indexes
 
@@ -570,9 +698,12 @@ JSON contracts require API/runtime schema validation in addition to the structur
 ### Keys and constraints
 
 - `model_package_items_artifact_id_fkey`: `FOREIGN KEY (artifact_id) REFERENCES ml_experiments.artifacts(id) ON DELETE RESTRICT`
+- `model_package_items_artifact_id_not_null`: `NOT NULL artifact_id`
 - `model_package_items_model_id_fkey`: `FOREIGN KEY (model_id) REFERENCES ml_experiments.model_versions(id) ON DELETE RESTRICT`
+- `model_package_items_model_id_not_null`: `NOT NULL model_id`
 - `model_package_items_pkey`: `PRIMARY KEY (model_id, purpose)`
 - `model_package_items_purpose_check`: `CHECK ((purpose = ANY (ARRAY['source_statistics'::text, 'source_pool'::text, 'replay_pool'::text, 'configuration'::text])))`
+- `model_package_items_purpose_not_null`: `NOT NULL purpose`
 
 ### Indexes
 
@@ -595,13 +726,20 @@ JSON contracts require API/runtime schema validation in addition to the structur
 ### Keys and constraints
 
 - `model_versions_adaptation_method_check`: `CHECK ((adaptation_method = ANY (ARRAY['none'::text, 'lda_statistics'::text, 'svm_weighted'::text, 'mlp_replay'::text])))`
+- `model_versions_adaptation_method_not_null`: `NOT NULL adaptation_method`
 - `model_versions_artifact_id_fkey`: `FOREIGN KEY (artifact_id) REFERENCES ml_experiments.artifacts(id) ON DELETE RESTRICT`
+- `model_versions_artifact_id_not_null`: `NOT NULL artifact_id`
 - `model_versions_check`: `CHECK ((((state = 'draft'::text) AND (published_at IS NULL)) OR ((state = 'published'::text) AND (published_at IS NOT NULL))))`
+- `model_versions_created_at_not_null`: `NOT NULL created_at`
+- `model_versions_id_not_null`: `NOT NULL id`
 - `model_versions_name_check`: `CHECK (((length(btrim(name)) >= 1) AND (length(btrim(name)) <= 160)))`
+- `model_versions_name_not_null`: `NOT NULL name`
 - `model_versions_pkey`: `PRIMARY KEY (id)`
 - `model_versions_run_id_fkey`: `FOREIGN KEY (run_id) REFERENCES ml_experiments.experiment_runs(id) ON DELETE RESTRICT`
 - `model_versions_run_id_key`: `UNIQUE (run_id)`
+- `model_versions_run_id_not_null`: `NOT NULL run_id`
 - `model_versions_state_check`: `CHECK ((state = ANY (ARRAY['draft'::text, 'published'::text])))`
+- `model_versions_state_not_null`: `NOT NULL state`
 
 ### Indexes
 
@@ -621,10 +759,15 @@ JSON contracts require API/runtime schema validation in addition to the structur
 
 ### Keys and constraints
 
+- `outbox_events_created_at_not_null`: `NOT NULL created_at`
 - `outbox_events_event_type_check`: `CHECK (((event_type)::text = 'ModelPublished'::text))`
+- `outbox_events_event_type_not_null`: `NOT NULL event_type`
+- `outbox_events_id_not_null`: `NOT NULL id`
+- `outbox_events_payload_not_null`: `NOT NULL payload`
 - `outbox_events_pkey`: `PRIMARY KEY (id)`
 - `outbox_events_run_id_fkey`: `FOREIGN KEY (run_id) REFERENCES ml_experiments.source_lda_runs(id) ON DELETE RESTRICT`
 - `outbox_events_run_id_key`: `UNIQUE (run_id)`
+- `outbox_events_run_id_not_null`: `NOT NULL run_id`
 
 ### Indexes
 
@@ -646,8 +789,11 @@ JSON contracts require API/runtime schema validation in addition to the structur
 ### Keys and constraints
 
 - `signal_summary_jobs_check`: `CHECK (((((status)::text = 'running'::text) AND (result IS NULL) AND (error IS NULL) AND (split_checksum IS NULL)) OR (((status)::text = 'succeeded'::text) AND (result IS NOT NULL) AND (error IS NULL) AND ((split_checksum)::text ~ '^[0-9a-f]{64}$'::text)) OR (((status)::text = 'failed'::text) AND (result IS NULL) AND (error IS NOT NULL) AND (split_checksum IS NULL))))`
+- `signal_summary_jobs_id_not_null`: `NOT NULL id`
 - `signal_summary_jobs_pkey`: `PRIMARY KEY (id)`
+- `signal_summary_jobs_split_id_not_null`: `NOT NULL split_id`
 - `signal_summary_jobs_status_check`: `CHECK (((status)::text = ANY ((ARRAY['running'::character varying, 'succeeded'::character varying, 'failed'::character varying])::text[])))`
+- `signal_summary_jobs_status_not_null`: `NOT NULL status`
 
 ### Indexes
 
@@ -677,11 +823,18 @@ JSON contracts require API/runtime schema validation in addition to the structur
 
 ### Keys and constraints
 
+- `source_lda_runs_correlation_id_not_null`: `NOT NULL correlation_id`
+- `source_lda_runs_created_at_not_null`: `NOT NULL created_at`
+- `source_lda_runs_id_not_null`: `NOT NULL id`
 - `source_lda_runs_idempotency_key_key`: `UNIQUE (idempotency_key)`
+- `source_lda_runs_manifest_id_not_null`: `NOT NULL manifest_id`
 - `source_lda_runs_pkey`: `PRIMARY KEY (id)`
 - `source_lda_runs_state_v2`: `CHECK (((((status)::text = 'queued'::text) AND (started_at IS NULL) AND (heartbeat_at IS NULL) AND (completed_at IS NULL) AND (manifest_checksum IS NULL) AND (snapshot IS NULL) AND (model IS NULL) AND (metrics IS NULL) AND (error IS NULL)) OR (((status)::text = 'running'::text) AND (started_at IS NOT NULL) AND (heartbeat_at IS NOT NULL) AND (completed_at IS NULL) AND (manifest_checksum IS NULL) AND (snapshot IS NULL) AND (model IS NULL) AND (metrics IS NULL) AND (error IS NULL)) OR (((status)::text = 'succeeded'::text) AND (completed_at IS NOT NULL) AND (manifest_checksum IS NOT NULL) AND ((manifest_checksum)::text ~ '^[0-9a-f]{64}$'::text) AND (snapshot IS NOT NULL) AND (model IS NOT NULL) AND (metrics IS NOT NULL) AND (error IS NULL)) OR (((status)::text = ANY ((ARRAY['failed'::character varying, 'interrupted'::character varying])::text[])) AND (completed_at IS NOT NULL) AND (snapshot IS NULL) AND (model IS NULL) AND (metrics IS NULL) AND (error IS NOT NULL))))`
+- `source_lda_runs_status_not_null`: `NOT NULL status`
 - `source_lda_runs_status_v2`: `CHECK (((status)::text = ANY ((ARRAY['queued'::character varying, 'running'::character varying, 'succeeded'::character varying, 'failed'::character varying, 'interrupted'::character varying])::text[])))`
+- `source_lda_runs_target_participant_id_not_null`: `NOT NULL target_participant_id`
 - `source_lda_runs_trace_context_check`: `CHECK ((jsonb_typeof(trace_context) = 'object'::text))`
+- `source_lda_runs_trace_context_not_null`: `NOT NULL trace_context`
 
 ### Indexes
 
@@ -719,18 +872,35 @@ JSON contracts require API/runtime schema validation in addition to the structur
 
 - `desktop_sessions_check`: `CHECK ((ended_at >= started_at))`
 - `desktop_sessions_check1`: `CHECK (((mode <> 'replay'::text) OR (recording_id IS NOT NULL)))`
+- `desktop_sessions_client_id_not_null`: `NOT NULL client_id`
 - `desktop_sessions_display_p95_ms_check`: `CHECK (((display_p95_ms >= (0)::double precision) AND (display_p95_ms < 'Infinity'::double precision)))`
+- `desktop_sessions_ended_at_not_null`: `NOT NULL ended_at`
 - `desktop_sessions_feature_version_check`: `CHECK ((length(btrim(feature_version)) > 0))`
+- `desktop_sessions_feature_version_not_null`: `NOT NULL feature_version`
+- `desktop_sessions_id_not_null`: `NOT NULL id`
+- `desktop_sessions_local_session_id_not_null`: `NOT NULL local_session_id`
 - `desktop_sessions_mode_check`: `CHECK ((mode = ANY (ARRAY['live'::text, 'replay'::text])))`
+- `desktop_sessions_mode_not_null`: `NOT NULL mode`
 - `desktop_sessions_model_sha256_check`: `CHECK ((model_sha256 ~ '^[0-9a-f]{64}$'::text))`
+- `desktop_sessions_model_sha256_not_null`: `NOT NULL model_sha256`
+- `desktop_sessions_model_version_id_not_null`: `NOT NULL model_version_id`
+- `desktop_sessions_neutral_confirmed_not_null`: `NOT NULL neutral_confirmed`
 - `desktop_sessions_operator_id_client_id_local_session_id_key`: `UNIQUE (operator_id, client_id, local_session_id)`
+- `desktop_sessions_operator_id_not_null`: `NOT NULL operator_id`
 - `desktop_sessions_payload_sha256_check`: `CHECK ((payload_sha256 ~ '^[0-9a-f]{64}$'::text))`
+- `desktop_sessions_payload_sha256_not_null`: `NOT NULL payload_sha256`
 - `desktop_sessions_pkey`: `PRIMARY KEY (id)`
 - `desktop_sessions_prediction_count_check`: `CHECK ((prediction_count >= 0))`
+- `desktop_sessions_prediction_count_not_null`: `NOT NULL prediction_count`
 - `desktop_sessions_processing_p95_ms_check`: `CHECK (((processing_p95_ms >= (0)::double precision) AND (processing_p95_ms < 'Infinity'::double precision)))`
+- `desktop_sessions_received_at_not_null`: `NOT NULL received_at`
+- `desktop_sessions_started_at_not_null`: `NOT NULL started_at`
 - `desktop_sessions_status_check`: `CHECK ((status = ANY (ARRAY['completed'::text, 'stopped'::text, 'interrupted'::text, 'failed'::text])))`
+- `desktop_sessions_status_not_null`: `NOT NULL status`
 - `desktop_sessions_termination_reason_check`: `CHECK ((length(btrim(termination_reason)) > 0))`
+- `desktop_sessions_termination_reason_not_null`: `NOT NULL termination_reason`
 - `desktop_sessions_timing_scope_check`: `CHECK ((length(btrim(timing_scope)) > 0))`
+- `desktop_sessions_timing_scope_not_null`: `NOT NULL timing_scope`
 
 ### Indexes
 
@@ -751,7 +921,12 @@ JSON contracts require API/runtime schema validation in addition to the structur
 
 ### Keys and constraints
 
+- `model_events_correlation_id_not_null`: `NOT NULL correlation_id`
+- `model_events_event_id_not_null`: `NOT NULL event_id`
+- `model_events_manifest_id_not_null`: `NOT NULL manifest_id`
+- `model_events_model_run_id_not_null`: `NOT NULL model_run_id`
 - `model_events_pkey`: `PRIMARY KEY (event_id)`
+- `model_events_received_at_not_null`: `NOT NULL received_at`
 
 ### Indexes
 
@@ -773,8 +948,12 @@ JSON contracts require API/runtime schema validation in addition to the structur
 ### Keys and constraints
 
 - `replay_sessions_check`: `CHECK (((((status)::text = 'running'::text) AND (model_checksum IS NULL) AND (result IS NULL) AND (error IS NULL)) OR (((status)::text = 'succeeded'::text) AND (model_checksum IS NOT NULL) AND ((model_checksum)::text ~ '^[0-9a-f]{64}$'::text) AND (result IS NOT NULL) AND (error IS NULL)) OR (((status)::text = 'failed'::text) AND (result IS NOT NULL) AND (error IS NOT NULL))))`
+- `replay_sessions_id_not_null`: `NOT NULL id`
+- `replay_sessions_model_run_id_not_null`: `NOT NULL model_run_id`
 - `replay_sessions_pkey`: `PRIMARY KEY (id)`
+- `replay_sessions_recording_id_not_null`: `NOT NULL recording_id`
 - `replay_sessions_status_check`: `CHECK (((status)::text = ANY ((ARRAY['running'::character varying, 'succeeded'::character varying, 'failed'::character varying])::text[])))`
+- `replay_sessions_status_not_null`: `NOT NULL status`
 
 ### Indexes
 

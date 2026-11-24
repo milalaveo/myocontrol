@@ -60,7 +60,7 @@ Builds are identified by the first 12 characters of the commit SHA; no manual ve
 - Windows: `MyoControl-<SHA>-windows-x64-setup.exe` and an install-free ZIP. Extract the entire ZIP and run `MyoControl.exe`; user data belongs to the Windows user profile.
 - macOS: `MyoControl-<SHA>-macos-<arm64|x64>.dmg` and `.zip`.
 
-After all desktop matrix jobs succeed, a push to `main` creates a **draft GitHub Release** named `build-<SHA>` with the packages and GitHub-generated release notes. Review and publish the draft manually to expose the assets through Releases. Rerunning the same commit refreshes assets only while its release is a draft; published assets are preserved. PRs validate packages without uploading installers or creating releases. The workflow does not deploy the server.
+After all desktop matrix jobs succeed, a push to `main` automatically publishes a **GitHub Release** named `build-<SHA>` with the packages and GitHub-generated release notes. No manual publication is required. If a rerun finds a draft for that commit, it refreshes the assets and publishes it; already-published releases and their assets are preserved. PRs validate packages without uploading installers or creating releases. The workflow does not deploy the server.
 
 Generated notes list merged pull requests, contributors and a comparison link, grouped using `.github/release.yml`. Use descriptive PR titles and labels (`enhancement`, `bug`, `dependencies`, etc.). Only the release job receives `contents: write`; other jobs use read access. No additional API secret or AI service is required.
 

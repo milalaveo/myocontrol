@@ -42,17 +42,17 @@ jobs:
         working-directory: desktop
         shell: pwsh
     env:
-      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      CSC_IDENTITY_AUTO_DISCOVERY: "false"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: "22"
           cache: npm
           cache-dependency-path: desktop/package-lock.json
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          python-version: "3.12"
           architecture: ${{ matrix.arch }}
       - run: npm ci
       - run: npm run setup:runtime
@@ -104,7 +104,7 @@ jobs:
           retention-days: 7
 
   release:
-    name: Draft release and generated notes
+    name: Publish release and generated notes
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: desktop
     runs-on: ubuntu-latest
@@ -117,7 +117,7 @@ jobs:
           pattern: myocontrol-*-${{ github.sha }}
           path: release-assets
           merge-multiple: true
-      - name: Create draft release
+      - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}
           COMMIT_SHA: ${{ github.sha }}
@@ -127,11 +127,12 @@ jobs:
           if gh release view "$tag" --json isDraft --jq .isDraft > release-state.txt 2>/dev/null; then
             if [ "$(cat release-state.txt)" = true ]; then
               gh release upload "$tag" release-assets/* --clobber
+              gh release edit "$tag" --draft=false
             else
               echo "This commit already has a published release; keeping its assets unchanged."
             fi
           else
             gh release create "$tag" release-assets/* \
-              --draft --generate-notes --target "$COMMIT_SHA" \
+              --generate-notes --target "$COMMIT_SHA" \
               --title "MyoControl $build_id"
           fi

@@ -117,8 +117,8 @@ jobs:
           psql -X -v ON_ERROR_STOP=1 -d thesis_data_service_test -f services/data_protocol/migrations/0004_research_splits.sql
           psql -X -v ON_ERROR_STOP=1 -d thesis_data_service_test -f services/data_protocol/tests/0004_research_splits.sql
           psql -X -v ON_ERROR_STOP=1 -d thesis_data_service_test -f services/data_protocol/migrations/0005_calibration.sql
-            psql -X -v ON_ERROR_STOP=1 -d thesis_data_service_test -f services/data_protocol/migrations/0006_client_publication.sql
-            psql -X -v ON_ERROR_STOP=1 -d thesis_data_service_test -f services/data_protocol/migrations/0007_recording_channels.sql
+          psql -X -v ON_ERROR_STOP=1 -d thesis_data_service_test -f services/data_protocol/migrations/0006_client_publication.sql
+          psql -X -v ON_ERROR_STOP=1 -d thesis_data_service_test -f services/data_protocol/migrations/0007_recording_channels.sql
           psql -X -v ON_ERROR_STOP=1 -d thesis_data_service_test -f services/data_protocol/tests/0005_calibration.sql
           DATA_DATABASE_URL='postgresql+psycopg://thesis_test:test-only@localhost:5432/thesis_data_service_test' \
             PYTHONPATH=services/data_protocol python -m unittest discover -s services/data_protocol/tests -p 'test_*.py' -v
@@ -142,18 +142,28 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          pids=()
+          cleanup() {
+            for pid in "${pids[@]}"; do kill "$pid" 2>/dev/null || true; done
+            for pid in "${pids[@]}"; do wait "$pid" 2>/dev/null || true; done
+          }
+          trap cleanup EXIT
           DATA_DATABASE_URL='postgresql+psycopg://thesis_test:test-only@localhost:5432/thesis_data_service_test' \
             DATA_ARTIFACT_ROOT="$RUNNER_TEMP/signals" PYTHONPATH=services/data_protocol \
             python -m uvicorn data_protocol.main:app --host 127.0.0.1 --port 8001 >"$RUNNER_TEMP/data.log" 2>&1 &
+          pids+=("$!")
           ML_DATABASE_URL='postgresql+psycopg://thesis_test:test-only@localhost:5432/thesis_ml_service_test' \
             DATA_SERVICE_URL=http://127.0.0.1:8001 PYTHONPATH=services/ml_experiments \
             python -m uvicorn ml_experiments.main:app --host 127.0.0.1 --port 8002 >"$RUNNER_TEMP/ml.log" 2>&1 &
+          pids+=("$!")
           ML_DATABASE_URL='postgresql+psycopg://thesis_test:test-only@localhost:5432/thesis_ml_service_test' \
             DATA_SERVICE_URL=http://127.0.0.1:8001 PYTHONPATH=services/ml_experiments \
             python -m ml_experiments.experiment_worker >"$RUNNER_TEMP/worker.log" 2>&1 &
+          pids+=("$!")
           RECOGNITION_DATABASE_URL='postgresql+psycopg://thesis_test:test-only@localhost:5432/thesis_recognition_service_test' \
             DATA_SERVICE_URL=http://127.0.0.1:8001 ML_SERVICE_URL=http://127.0.0.1:8002 PYTHONPATH=services/recognition \
             python -m uvicorn recognition.main:app --host 127.0.0.1 --port 8003 >"$RUNNER_TEMP/recognition.log" 2>&1 &
+          pids+=("$!")
           curl --fail --retry 10 --retry-connrefused --retry-delay 1 http://127.0.0.1:8001/health/ready
           curl --fail --retry 10 --retry-connrefused --retry-delay 1 http://127.0.0.1:8002/health/ready
           curl --fail --retry 10 --retry-connrefused --retry-delay 1 http://127.0.0.1:8003/health/ready

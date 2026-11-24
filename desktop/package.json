@@ -86,7 +86,9 @@
         "zip"
       ],
       "category": "public.app-category.education",
-      "identity": null
+      "identity": null,
+      "hardenedRuntime": false,
+      "artifactName": "MyoControl-${version}-mac-${arch}.${ext}"
     },
     "linux": {
       "target": [

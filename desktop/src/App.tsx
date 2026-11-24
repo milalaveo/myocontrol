@@ -45,7 +45,7 @@ export default function App() {
   const [rate, setRate] = useState('1000')
   const [purpose, setPurpose] = useState('research')
   const [gesture, setGesture] = useState('rest')
-  const [base, setBase] = useState('http://localhost:8000')
+  const [base, setBase] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const active = !!status && ['connecting', 'running', 'paused', 'stopping'].includes(status.state)

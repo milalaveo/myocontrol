@@ -1,16 +1,48 @@
-name: Desktop checks
+name: Desktop builds
 
 on:
   push:
+    branches: [main]
   pull_request:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: desktop-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   desktop:
-    runs-on: windows-latest
+    name: ${{ matrix.platform }} (${{ matrix.arch }})
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: windows
+            runner: windows-latest
+            arch: x64
+            builder-args: --win nsis --x64
+            executable: release/win-unpacked/MyoControl.exe
+          - platform: macos
+            runner: macos-15
+            arch: arm64
+            builder-args: --mac dmg zip --arm64
+            executable: release/mac-arm64/MyoControl.app/Contents/MacOS/MyoControl
+          - platform: macos
+            runner: macos-15-intel
+            arch: x64
+            builder-args: --mac dmg zip --x64
+            executable: release/mac/MyoControl.app/Contents/MacOS/MyoControl
     defaults:
       run:
         working-directory: desktop
+        shell: pwsh
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -21,25 +53,85 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+          architecture: ${{ matrix.arch }}
       - run: npm ci
       - run: npm run setup:runtime
       - name: Runtime tests
-        shell: pwsh
         run: |
           $env:PYTHONPATH='../local-runtime'
-          & ../local-runtime/.venv/Scripts/python.exe -m unittest discover -s ../local-runtime/tests -v
+          $python = if ($IsWindows) { '../local-runtime/.venv/Scripts/python.exe' } else { '../local-runtime/.venv/bin/python' }
+          & $python -m unittest discover -s ../local-runtime/tests -v
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - run: npm run format:check
       - run: npm run build
       - run: npm run test:e2e
       - run: npm run build:runtime
-      - run: npm exec electron-builder -- --win nsis --publish never
-      - name: Packaged application check
-        shell: pwsh
+      - name: Name packages by commit
         run: |
-          $env:MYOCONTROL_TEST_EXECUTABLE=(Resolve-Path 'release/win-unpacked/MyoControl.exe').Path
+          $buildId = $env:GITHUB_SHA.Substring(0, 12)
+          "MYOCONTROL_BUILD_ID=$buildId" >> $env:GITHUB_ENV
+          $package = Get-Content package.json -Raw | ConvertFrom-Json -AsHashtable
+          $package.build.win.artifactName = 'MyoControl-' + $buildId + '-windows-${arch}-setup.${ext}'
+          $package.build.mac.artifactName = 'MyoControl-' + $buildId + '-macos-${arch}.${ext}'
+          $package | ConvertTo-Json -Depth 20 | Set-Content package.json -Encoding utf8
+      - name: Build native installer
+        run: npm exec electron-builder -- ${{ matrix.builder-args }} --publish never
+      - name: Packaged application check
+        run: |
+          $env:MYOCONTROL_TEST_EXECUTABLE=(Resolve-Path '${{ matrix.executable }}').Path
           npm run test:e2e
-      - uses: actions/upload-artifact@v4
-        if: github.event_name == 'workflow_dispatch'
+      - name: Create Windows archive without installation
+        if: runner.os == 'Windows'
+        run: Compress-Archive -Path release/win-unpacked/* -DestinationPath ("release/MyoControl-" + $env:MYOCONTROL_BUILD_ID + "-windows-x64.zip")
+      - name: Upload installers
+        if: github.event_name == 'workflow_dispatch' || github.event_name == 'push'
+        uses: actions/upload-artifact@v4
         with:
-          name: myocontrol-windows
-          path: desktop/release/*setup.exe
+          name: myocontrol-${{ matrix.platform }}-${{ matrix.arch }}-${{ github.sha }}
+          path: |
+            desktop/release/*setup.exe
+            desktop/release/*.dmg
+            desktop/release/*.zip
+          if-no-files-found: error
+          retention-days: 14
+      - name: Upload failed test diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-test-results-${{ matrix.platform }}-${{ matrix.arch }}
+          path: desktop/test-results/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  release:
+    name: Draft release and generated notes
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: desktop
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: myocontrol-*-${{ github.sha }}
+          path: release-assets
+          merge-multiple: true
+      - name: Create draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          COMMIT_SHA: ${{ github.sha }}
+        run: |
+          build_id="${COMMIT_SHA:0:12}"
+          tag="build-$build_id"
+          if gh release view "$tag" --json isDraft --jq .isDraft > release-state.txt 2>/dev/null; then
+            if [ "$(cat release-state.txt)" = true ]; then
+              gh release upload "$tag" release-assets/* --clobber
+            else
+              echo "This commit already has a published release; keeping its assets unchanged."
+            fi
+          else
+            gh release create "$tag" release-assets/* \
+              --draft --generate-notes --target "$COMMIT_SHA" \
+              --title "MyoControl $build_id"
+          fi
